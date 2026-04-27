@@ -121,17 +121,3 @@ export default function LibrarianDashboard() {
     </div>
   );
 }
-                <h4 className="font-semibold mb-2">Most Active Users</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• John Doe - 45 questions</li>
-                  <li>• Sarah Smith - 38 questions</li>
-                  <li>• Mike Johnson - 32 questions</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
