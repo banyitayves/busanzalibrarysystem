@@ -23,7 +23,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // In-memory user storage (in production, use a database)
-let registeredUsers: User[] = [];
+let registeredUsers: User[] = [
+  {
+    id: 'lib-001',
+    email: 'nshimiyeyves12@gmail.com',
+    name: 'Librarian YVES',
+    role: 'librarian',
+    registeredAt: new Date().toISOString(),
+  },
+];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -39,7 +47,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (emailOrName: string, password: string, role: UserRole) => {
-    // Simulate authentication
+    // Check for librarian login
+    if (emailOrName === 'nshimiyeyves12@gmail.com' && password === 'Nshimiye2004' && role === 'librarian') {
+      const librarianUser = registeredUsers[0]; // Get pre-registered librarian
+      setUser(librarianUser);
+      localStorage.setItem('user', JSON.stringify(librarianUser));
+      return;
+    }
+
+    // For students/teachers, create a temporary session
     const newUser: User = {
       id: Date.now().toString(),
       email: emailOrName.includes('@') ? emailOrName : undefined,
