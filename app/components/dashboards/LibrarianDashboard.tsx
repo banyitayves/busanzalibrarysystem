@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
+import LibraryReportsSection from '@/app/components/features/LibraryReportsSection';
+import CSVImportSection from '@/app/components/features/CSVImportSection';
 
 export default function LibrarianDashboard() {
   const { user } = useAuth();
@@ -12,20 +14,25 @@ export default function LibrarianDashboard() {
       {/* Welcome Card */}
       <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-lg">
         <h2 className="text-3xl font-bold mb-2">👨‍💼 Librarian Management Panel</h2>
-        <p>Manage the library collection, user access, and system oversight.</p>
+        <p>Manage the library collection, generate reports, import bulk data, and system oversight.</p>
+        <div className="mt-3 p-2 bg-purple-400 rounded text-sm">
+          📞 Contact <strong>YVES</strong> at <strong>+250791756160</strong> for technical support
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 flex-wrap border-b">
+      <div className="flex gap-4 flex-wrap border-b overflow-x-auto">
         {[
           { id: 'books', label: '📚 Manage Books', icon: 'books' },
           { id: 'users', label: '👥 Users', icon: 'users' },
-          { id: 'analytics', label: '📊 Analytics', icon: 'analytics' },
+          { id: 'reports', label: '📊 Reports', icon: 'reports' },
+          { id: 'import', label: '📤 Bulk Import', icon: 'import' },
+          { id: 'analytics', label: '📈 Analytics', icon: 'analytics' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 font-semibold transition ${
+            className={`px-4 py-2 font-semibold transition whitespace-nowrap ${
               activeTab === tab.id
                 ? 'text-purple-600 border-b-2 border-purple-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -83,9 +90,13 @@ export default function LibrarianDashboard() {
                 <p className="text-2xl font-bold text-green-600">75</p>
               </div>
             </div>
-            <p className="text-gray-600">User management features coming soon...</p>
+            <p className="text-gray-600">User management features available in Bulk Import tab</p>
           </div>
         )}
+
+        {activeTab === 'reports' && <LibraryReportsSection />}
+
+        {activeTab === 'import' && <CSVImportSection />}
 
         {activeTab === 'analytics' && (
           <div className="bg-white p-6 rounded-lg shadow">
@@ -98,6 +109,18 @@ export default function LibrarianDashboard() {
                 <p className="text-gray-600 text-sm">Course Enrollments: 89</p>
               </div>
               <div>
+                <h4 className="font-semibold mb-2">System Health</h4>
+                <p className="text-gray-600 text-sm">Server Status: ✅ Healthy</p>
+                <p className="text-gray-600 text-sm">Database: ✅ Operational</p>
+                <p className="text-gray-600 text-sm">API Response Time: 45ms</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
                 <h4 className="font-semibold mb-2">Most Active Users</h4>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• John Doe - 45 questions</li>

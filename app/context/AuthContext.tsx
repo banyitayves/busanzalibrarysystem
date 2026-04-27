@@ -6,7 +6,7 @@ export type UserRole = 'librarian' | 'student' | 'teacher' | null;
 
 interface User {
   id: string;
-  email: string;
+  email?: string;
   name: string;
   role: UserRole;
   registeredAt?: string;
@@ -14,8 +14,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
-  register: (email: string, name: string, password: string, role: UserRole) => Promise<void>;
+  login: (emailOrName: string, password: string, role: UserRole) => Promise<void>;
+  register: (name: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -38,12 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string, role: UserRole) => {
+  const login = async (emailOrName: string, password: string, role: UserRole) => {
     // Simulate authentication
     const newUser: User = {
       id: Date.now().toString(),
-      email,
-      name: email.split('@')[0],
+      email: emailOrName.includes('@') ? emailOrName : undefined,
+      name: emailOrName.includes('@') ? emailOrName.split('@')[0] : emailOrName,
       role,
       registeredAt: new Date().toISOString(),
     };
@@ -51,17 +51,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
-  const register = async (email: string, name: string, password: string, role: UserRole) => {
+  const register = async (name: string, password: string, role: UserRole) => {
     // Check if user already exists
-    const existingUser = registeredUsers.find((u) => u.email === email);
+    const existingUser = registeredUsers.find((u) => u.name === name);
     if (existingUser) {
-      throw new Error('Email already registered');
+      throw new Error('Name already registered');
     }
 
-    // Create new user
+    // Validate password
+    if (password.length < 4) {
+      throw new Error('Password must be at least 4 characters');
+    }
+
+    // Create new user (without email for students)
     const newUser: User = {
       id: Date.now().toString(),
-      email,
       name,
       role,
       registeredAt: new Date().toISOString(),

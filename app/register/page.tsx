@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import { useAuth, type UserRole } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,8 +18,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!email || !name || !password || !confirmPassword) {
+    if (!name || !password || !confirmPassword) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if (name.length < 2) {
+      setError('Name must be at least 2 characters');
       return;
     }
 
@@ -30,19 +33,19 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 4) {
+      setError('Password must be at least 4 characters');
       return;
     }
 
     if (!selectedRole || selectedRole === 'librarian') {
-      setError('Only students can register. Teachers and Librarians use admin panel.');
+      setError('Only students and teachers can register');
       return;
     }
 
     setIsLoading(true);
     try {
-      await register(email, name, password, selectedRole);
+      await register(name, password, selectedRole);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -77,23 +80,39 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="John Doe"
+              placeholder="Enter your name"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              I am a:
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="your@email.com"
-              required
-            />
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setSelectedRole('student')}
+                className={`flex-1 p-3 rounded-lg border-2 transition font-semibold ${
+                  selectedRole === 'student'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
+                }`}
+              >
+                👨‍🎓 Student
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('teacher')}
+                className={`flex-1 p-3 rounded-lg border-2 transition font-semibold ${
+                  selectedRole === 'teacher'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
+                }`}
+              >
+                🏫 Teacher
+              </button>
+            </div>
           </div>
 
           <div>
@@ -105,7 +124,7 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="••••••••"
+              placeholder="At least 4 characters"
               required
             />
           </div>
@@ -119,39 +138,9 @@ export default function RegisterPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="••••••••"
+              placeholder="Confirm password"
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              I am a:
-            </label>
-            <div className="space-y-3">
-              {[
-                { role: 'student' as UserRole, label: '👨‍🎓 Student', desc: 'Learn & ask questions' },
-                { role: 'teacher' as UserRole, label: '👨‍🏫 Teacher', desc: 'Create courses' },
-              ].map(({ role, label, desc }) => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => setSelectedRole(role)}
-                  disabled={role === 'teacher'}
-                  className={`w-full p-3 text-left rounded-lg border-2 transition ${
-                    selectedRole === role
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-gray-300 bg-gray-50 hover:border-indigo-300'
-                  } ${role === 'teacher' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <div className="font-semibold text-gray-800">{label}</div>
-                  <div className="text-xs text-gray-600">{desc}</div>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              * Teachers register through admin panel
-            </p>
           </div>
 
           <button
@@ -159,22 +148,29 @@ export default function RegisterPage() {
             disabled={isLoading}
             className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold disabled:opacity-50"
           >
-            {isLoading ? 'Creating Account...' : 'Create Account'}
+            {isLoading ? '⏳ Creating Account...' : '✨ Create Account'}
           </button>
+
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-xs text-blue-900">
+              <strong>📞 Need help?</strong> Contact <strong>YVES</strong><br />
+              📱 +250791756160
+            </p>
+          </div>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+            <button
+              type="button"
+              onClick={() => router.push('/login')}
+              className="text-indigo-600 hover:text-indigo-700 font-semibold"
+            >
               Sign In
-            </Link>
+            </button>
           </p>
         </div>
-
-        <p className="text-center text-xs text-gray-500 mt-6 border-t pt-4">
-          By registering, you agree to our Terms of Service and Privacy Policy
-        </p>
       </div>
     </div>
   );

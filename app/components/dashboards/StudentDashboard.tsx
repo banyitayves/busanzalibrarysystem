@@ -6,6 +6,8 @@ import QuestionSection from '@/app/components/features/QuestionSection';
 import SummarySection from '@/app/components/features/SummarySection';
 import CoursesSection from '@/app/components/features/CoursesSection';
 import DiscussionsSection from '@/app/components/features/DiscussionsSection';
+import RecommendationsSection from '@/app/components/features/RecommendationsSection';
+import PeerMessagingSection from '@/app/components/features/PeerMessagingSection';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -17,22 +19,27 @@ export default function StudentDashboard() {
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg">
         <h2 className="text-3xl font-bold mb-2">👨‍🎓 Welcome to Your Learning Journey!</h2>
         <p>
-          Ask questions, get AI-powered answers, generate book summaries, and learn from peers.
+          Ask questions, get AI-powered answers, discover recommended books, chat with peers, and learn together.
         </p>
+        <div className="mt-3 p-2 bg-blue-400 rounded text-sm">
+          📞 Need help? Contact <strong>YVES</strong> at <strong>+250791756160</strong>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 flex-wrap border-b">
+      <div className="flex gap-4 flex-wrap border-b overflow-x-auto">
         {[
           { id: 'questions', label: '❓ Ask Questions', icon: 'question' },
           { id: 'summaries', label: '📖 Book Summaries', icon: 'summary' },
+          { id: 'recommendations', label: '🎯 AI Recommendations', icon: 'recommendations' },
           { id: 'courses', label: '📚 Courses', icon: 'courses' },
           { id: 'discussions', label: '💬 Peer Learning', icon: 'discussions' },
+          { id: 'messaging', label: '💭 Chat with Peers', icon: 'messaging' },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 font-semibold transition ${
+            className={`px-4 py-2 font-semibold transition whitespace-nowrap ${
               activeTab === tab.id
                 ? 'text-indigo-600 border-b-2 border-indigo-600'
                 : 'text-gray-600 hover:text-gray-900'
@@ -47,9 +54,14 @@ export default function StudentDashboard() {
       <div>
         {activeTab === 'questions' && <QuestionSection />}
         {activeTab === 'summaries' && <SummarySection />}
+        {activeTab === 'recommendations' && <RecommendationsSection />}
         {activeTab === 'courses' && <CoursesSection />}
         {activeTab === 'discussions' && <DiscussionsSection type="student" />}
+        {activeTab === 'messaging' && <PeerMessagingSection />}
       </div>
+    </div>
+  );
+}
     </div>
   );
 }
