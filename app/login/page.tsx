@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth, type UserRole } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -89,6 +90,18 @@ export default function LoginPage() {
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="mt-6 text-center border-t pt-6">
+          <p className="text-sm text-gray-600 mb-4">
+            Don't have an account?
+          </p>
+          <Link
+            href="/register"
+            className="w-full block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-center"
+          >
+            Create New Account
+          </Link>
+        </div>
 
         <p className="text-center text-sm text-gray-600 mt-6">
           Demo: Use any email (e.g., test@example.com)

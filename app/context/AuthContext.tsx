@@ -9,16 +9,21 @@ interface User {
   email: string;
   name: string;
   role: UserRole;
+  registeredAt?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
+  register: (email: string, name: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// In-memory user storage (in production, use a database)
+let registeredUsers: User[] = [];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,7 +45,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       name: email.split('@')[0],
       role,
+      registeredAt: new Date().toISOString(),
     };
+    setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+  };
+
+  const register = async (email: string, name: string, password: string, role: UserRole) => {
+    // Check if user already exists
+    const existingUser = registeredUsers.find((u) => u.email === email);
+    if (existingUser) {
+      throw new Error('Email already registered');
+    }
+
+    // Create new user
+    const newUser: User = {
+      id: Date.now().toString(),
+      email,
+      name,
+      role,
+      registeredAt: new Date().toISOString(),
+    };
+
+    registeredUsers.push(newUser);
     setUser(newUser);
     localStorage.setItem('user', JSON.stringify(newUser));
   };
@@ -51,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
