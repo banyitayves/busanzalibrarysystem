@@ -45,7 +45,8 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      await register(name, password, selectedRole);
+      // Use name as username, can be modified to use email if needed
+      await register(name.toLowerCase().replace(/\s+/g, ''), password, name, selectedRole);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');

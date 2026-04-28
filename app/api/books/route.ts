@@ -6,14 +6,6 @@ import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-
 import { generateBookSummary } from '@/lib/openai-service';
 import { v4 as uuidv4 } from 'uuid';
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
-  },
-};
-
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();

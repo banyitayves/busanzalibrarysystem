@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import pdfParse from 'pdf-parse';
-import { Document } from 'docx';
 
 export interface FileContent {
   text: string;
@@ -16,12 +15,11 @@ export async function extractTextFromFile(filePath: string): Promise<FileContent
   try {
     if (fileExt === '.pdf') {
       return await extractFromPDF(filePath, fileName);
-    } else if (fileExt === '.docx') {
-      return await extractFromDocx(filePath, fileName);
     } else if (fileExt === '.txt') {
       return await extractFromTxt(filePath, fileName);
-    } else if (fileExt === '.doc') {
-      // For .doc files, try to read as text (limited support)
+    } else if (fileExt === '.docx' || fileExt === '.doc') {
+      // For now, treat DOCX/DOC files as text (limited support)
+      // In production, consider using a proper DOCX parser library
       return await extractFromTxt(filePath, fileName);
     } else {
       throw new Error(`Unsupported file type: ${fileExt}`);
@@ -43,39 +41,13 @@ async function extractFromPDF(filePath: string, fileName: string): Promise<FileC
   };
 }
 
-async function extractFromDocx(filePath: string, fileName: string): Promise<FileContent> {
-  try {
-    const data = fs.readFileSync(filePath);
-    const doc = await Document.fromBuffer(data);
-    
-    let fullText = '';
-    
-    doc.sections.forEach((section) => {
-      section.children.forEach((element: any) => {
-        if (element.text) {
-          fullText += element.text + '\n';
-        }
-      });
-    });
-
-    return {
-      text: fullText,
-      fileName,
-      fileType: 'docx',
-    };
-  } catch (error) {
-    console.error('Error extracting from DOCX:', error);
-    throw error;
-  }
-}
-
 async function extractFromTxt(filePath: string, fileName: string): Promise<FileContent> {
   const text = fs.readFileSync(filePath, 'utf-8');
   
   return {
     text,
     fileName,
-    fileType: 'txt',
+    fileType: path.extname(fileName).replace('.', '') || 'txt',
   };
 }
 

@@ -5,9 +5,10 @@ import { splitTextIntoChunks } from '@/lib/file-processor';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
@@ -17,7 +18,7 @@ export async function GET(
         // Get book summary
         const [summary] = await connection.execute(
           `SELECT summary FROM book_summaries WHERE book_id = ?`,
-          [params.id]
+          [id]
         );
 
         if (!summary || (summary as any[]).length === 0) {
@@ -29,7 +30,7 @@ export async function GET(
         // Get book details
         const [book] = await connection.execute(
           `SELECT id, title, author, description, file_type, file_content, created_at FROM books WHERE id = ?`,
-          [params.id]
+          [id]
         );
 
         if (!book || (book as any[]).length === 0) {
@@ -49,9 +50,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { action, studentId, question, dueDate } = body;
 
@@ -63,7 +65,7 @@ export async function POST(
 
         const [result] = await connection.execute(
           `INSERT INTO book_borrowing (student_id, book_id, due_date) VALUES (?, ?, ?)`,
-          [studentId, params.id, dueDateValue]
+          [studentId, id, dueDateValue]
         );
 
         return NextResponse.json(
@@ -74,7 +76,7 @@ export async function POST(
         // Return book
         await connection.execute(
           `UPDATE book_borrowing SET status = 'returned', returned_date = NOW() WHERE student_id = ? AND book_id = ? AND status = 'borrowed'`,
-          [studentId, params.id]
+          [studentId, id]
         );
 
         return NextResponse.json({ message: 'Book returned successfully' });
@@ -82,7 +84,7 @@ export async function POST(
         // Ask question about book
         const [book] = await connection.execute(
           `SELECT file_content FROM books WHERE id = ?`,
-          [params.id]
+          [id]
         );
 
         if (!book || (book as any[]).length === 0) {
@@ -109,7 +111,7 @@ export async function POST(
         const [result] = await connection.execute(
           `INSERT INTO book_questions (book_id, student_id, question, answer, is_answered) 
            VALUES (?, ?, ?, ?, TRUE)`,
-          [params.id, studentId, question, answer]
+          [id, studentId, question, answer]
         );
 
         return NextResponse.json(
