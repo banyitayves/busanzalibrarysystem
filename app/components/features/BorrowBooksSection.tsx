@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 interface Book {
-  id: number;
+  id: string;
   title: string;
   author: string;
   description: string;
@@ -15,7 +15,7 @@ export default function BorrowBooksSection() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [selectedBookId, setSelectedBookId] = useState<number | null>(null);
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBooks();
@@ -41,7 +41,7 @@ export default function BorrowBooksSection() {
     }
   };
 
-  const handleBorrow = async (bookId: number) => {
+  const handleBorrow = async (bookId: string) => {
     try {
       const response = await fetch(`/api/books/${bookId}`, {
         method: 'POST',
