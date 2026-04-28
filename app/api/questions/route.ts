@@ -65,39 +65,69 @@ export async function POST(request: NextRequest) {
         const booksCollection = db.collection('books');
         const book = await booksCollection.findOne({ _id: bookId });
         if (book && book.file_content) {
-          context = book.file_content.substring(0, 2000); // Use first 2000 chars as context
+          context = `[From: "${book.title}" by ${book.author || 'Unknown'}]\n\n${book.file_content.substring(0, 3000)}`;
         }
       } else {
         // Search in mock storage
         const mockBooks = getMockBooks();
         const book = mockBooks.find(b => b._id === bookId);
         if (book && book.file_content) {
-          context = book.file_content.substring(0, 2000);
+          context = `[From: "${book.title}" by ${book.author || 'Unknown'}]\n\n${book.file_content.substring(0, 3000)}`;
         }
       }
     } else {
-      // Try to find relevant books by searching content for keywords
-      const questionWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      // Smart search: find relevant books by scoring keyword matches
+      const questionLower = question.toLowerCase();
+      const questionWords = questionLower
+        .split(/[\s\-,.!?;:]+/)
+        .filter(w => w.length > 2);
+      
       let relevantBooks: any[] = [];
       
       if (db) {
         const booksCollection = db.collection('books');
-        relevantBooks = await booksCollection
-          .find({})
-          .toArray();
+        relevantBooks = await booksCollection.find({}).toArray();
       } else {
         relevantBooks = getMockBooks();
       }
       
-      // Find books with content matching the question
-      for (const book of relevantBooks) {
-        if (book.file_content) {
-          const bookContent = book.file_content.toLowerCase();
-          const matchCount = questionWords.filter(word => bookContent.includes(word)).length;
+      // Score books by relevance
+      const scoredBooks = relevantBooks
+        .map(book => {
+          const bookContent = (book.file_content || '').toLowerCase();
+          const titleMatch = (book.title || '').toLowerCase();
+          const descriptionMatch = (book.description || '').toLowerCase();
           
-          if (matchCount > 0) {
-            context += `\n\n[From "${book.title}"]:\n${book.file_content.substring(0, 1000)}`;
-            if (context.length > 3000) break; // Limit context size
+          // Count keyword matches in different sections
+          let score = 0;
+          for (const word of questionWords) {
+            // Title matches are worth more (5 points)
+            if (titleMatch.includes(word)) score += 5;
+            // Description matches (3 points)
+            if (descriptionMatch.includes(word)) score += 3;
+            // Content matches (1 point)
+            if (bookContent.includes(word)) score += 1;
+          }
+          
+          return { book, score };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+      
+      // Use top 3 most relevant books
+      const topBooks = scoredBooks.slice(0, 3);
+      
+      for (const { book } of topBooks) {
+        if (book.file_content) {
+          context += `\n\n[📖 From: "${book.title}" by ${book.author || 'Unknown'}]\n${book.file_content.substring(0, 1500)}`;
+        }
+      }
+      
+      // If no matches found, include all available books as fallback
+      if (topBooks.length === 0 && relevantBooks.length > 0) {
+        for (const book of relevantBooks.slice(0, 2)) {
+          if (book.file_content) {
+            context += `\n\n[📖 Available: "${book.title}" by ${book.author || 'Unknown'}]\n${book.file_content.substring(0, 1000)}`;
           }
         }
       }

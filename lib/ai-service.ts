@@ -14,16 +14,35 @@ export async function generateAnswer(question: string, context?: string): Promis
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     
-    let prompt = `You are a helpful educational assistant. Please provide a clear, concise answer to this question:\n\n${question}`;
+    let prompt = '';
     
-    if (context) {
-      prompt = `You are a helpful educational assistant. Based on the following educational material, please answer the student's question. If the material doesn't contain relevant information, provide a helpful general answer.\n\nEducational Material:\n${context}\n\nStudent Question: ${question}\n\nProvide a clear, concise answer (2-3 paragraphs).`;
+    if (context && context.length > 50) {
+      // Use provided context to answer the question
+      prompt = `You are an expert educational assistant. You have been provided with educational material to answer a student's question.
+
+IMPORTANT INSTRUCTIONS:
+1. Use ONLY the provided material to answer the question
+2. If the material contains the answer, provide it directly with the relevant details
+3. If the material doesn't contain enough information, say so clearly
+4. Always cite which part of the material you're referencing
+5. For exam papers: Point out relevant past exam questions and model answers
+6. For textbooks: Provide clear explanations with examples from the text
+
+EDUCATIONAL MATERIAL:
+${context}
+
+STUDENT QUESTION: "${question}"
+
+Provide a comprehensive, well-structured answer based on the material. If the material contains definitions, formulas, or solutions, include them directly.`;
     } else {
-      prompt += `\n\nAnswer should be informative but not too long (2-3 paragraphs).`;
+      prompt = `You are a helpful educational assistant. Please provide a clear, concise, and accurate answer to this question.
+
+STUDENT QUESTION: "${question}"
+
+Provide an informative answer (2-3 paragraphs) that would be helpful for a student learning this topic.`;
     }
     
     const result = await model.generateContent(prompt);
-
     const response = await result.response;
     const text = response.text();
     return text || generateMockAnswer(question, context);
