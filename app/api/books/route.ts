@@ -1,86 +1,109 @@
 import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
+import fs from 'fs';
+import pool from '@/lib/db';
+import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-processor';
+import { generateBookSummary } from '@/lib/openai-service';
+import { v4 as uuidv4 } from 'uuid';
 
-// In-memory database for demonstration
-let books: Array<{
-  id: string;
-  title: string;
-  author: string;
-  isbn: string;
-  publishedYear: number;
-  quantity: number;
-  status: 'available' | 'borrowed' | 'reserved';
-}> = [
-  {
-    id: '1',
-    title: 'The Great Gatsby',
-    author: 'F. Scott Fitzgerald',
-    isbn: '978-0-7432-7356-5',
-    publishedYear: 1925,
-    quantity: 5,
-    status: 'available',
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
   },
-  {
-    id: '2',
-    title: 'To Kill a Mockingbird',
-    author: 'Harper Lee',
-    isbn: '978-0-06-112008-4',
-    publishedYear: 1960,
-    quantity: 3,
-    status: 'available',
-  },
-  {
-    id: '3',
-    title: '1984',
-    author: 'George Orwell',
-    isbn: '978-0-452-26249-2',
-    publishedYear: 1949,
-    quantity: 2,
-    status: 'borrowed',
-  },
-];
-
-export async function GET() {
-  return NextResponse.json(books);
-}
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const newBook = {
-      id: Date.now().toString(),
-      ...body,
-    };
-    books.push(newBook);
-    return NextResponse.json(newBook, { status: 201 });
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const title = formData.get('title') as string;
+    const author = formData.get('author') as string;
+    const description = formData.get('description') as string;
+    const userId = formData.get('userId') as string;
+
+    if (!file || !title) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Save file to public/uploads
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const fileName = `${uuidv4()}-${file.name}`;
+    const filePath = path.join(uploadsDir, fileName);
+
+    const buffer = await file.arrayBuffer();
+    fs.writeFileSync(filePath, Buffer.from(buffer));
+
+    // Extract text from file
+    const fileContent = await extractTextFromFile(filePath);
+    const cleanedContent = cleanText(fileContent.text);
+
+    // Save to database
+    const connection = await pool.getConnection();
+    try {
+      const [result] = await connection.execute(
+        `INSERT INTO books (title, author, description, file_path, file_type, file_content, uploaded_by) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          title,
+          author,
+          description,
+          `/uploads/${fileName}`,
+          fileContent.fileType,
+          cleanedContent,
+          userId || null,
+        ]
+      );
+
+      const bookId = (result as any).insertId;
+
+      // Generate and save summary
+      try {
+        const summary = await generateBookSummary(cleanedContent, title);
+        await connection.execute(
+          `INSERT INTO book_summaries (book_id, summary) VALUES (?, ?)`,
+          [bookId, summary]
+        );
+      } catch (summaryError) {
+        console.error('Error generating summary:', summaryError);
+        // Continue even if summary generation fails
+      }
+
+      return NextResponse.json(
+        { id: bookId, message: 'Book uploaded successfully' },
+        { status: 201 }
+      );
+    } finally {
+      await connection.end();
+    }
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error uploading book:', error);
+    return NextResponse.json(
+      { error: 'Failed to upload book', details: String(error) },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const body = await request.json();
-    const bookIndex = books.findIndex((b) => b.id === body.id);
-    if (bookIndex === -1) {
-      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
-    }
-    books[bookIndex] = { ...books[bookIndex], ...body };
-    return NextResponse.json(books[bookIndex]);
-  } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
-  }
-}
+    const connection = await pool.getConnection();
+    try {
+      const [books] = await connection.execute(
+        `SELECT id, title, author, description, file_type, created_at FROM books ORDER BY created_at DESC LIMIT 100`
+      );
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ error: 'ID required' }, { status: 400 });
+      return NextResponse.json(books);
+    } finally {
+      await connection.end();
     }
-    books = books.filter((b) => b.id !== id);
-    return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error fetching books:', error);
+    return NextResponse.json({ error: 'Failed to fetch books' }, { status: 500 });
   }
 }

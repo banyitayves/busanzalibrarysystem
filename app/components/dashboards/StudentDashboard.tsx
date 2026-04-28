@@ -8,6 +8,7 @@ import CoursesSection from '@/app/components/features/CoursesSection';
 import DiscussionsSection from '@/app/components/features/DiscussionsSection';
 import RecommendationsSection from '@/app/components/features/RecommendationsSection';
 import PeerMessagingSection from '@/app/components/features/PeerMessagingSection';
+import StudentLibraryHub from '@/app/components/StudentLibraryHub';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -29,6 +30,7 @@ export default function StudentDashboard() {
       {/* Tabs */}
       <div className="flex gap-4 flex-wrap border-b overflow-x-auto">
         {[
+          { id: 'library', label: '📚 Smart Library', icon: 'library' },
           { id: 'questions', label: '❓ Ask Questions', icon: 'question' },
           { id: 'summaries', label: '📖 Book Summaries', icon: 'summary' },
           { id: 'recommendations', label: '🎯 AI Recommendations', icon: 'recommendations' },
@@ -52,6 +54,7 @@ export default function StudentDashboard() {
 
       {/* Tab Content */}
       <div>
+        {activeTab === 'library' && <StudentLibraryHub />}
         {activeTab === 'questions' && <QuestionSection />}
         {activeTab === 'summaries' && <SummarySection />}
         {activeTab === 'recommendations' && <RecommendationsSection />}

@@ -10,12 +10,14 @@ interface User {
   name: string;
   role: UserRole;
   registeredAt?: string;
+  username?: string;
+  studyProgram?: string; // For students
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (emailOrName: string, password: string, role: UserRole) => Promise<void>;
-  register: (name: string, password: string, role: UserRole) => Promise<void>;
+  login: (username: string, password: string, role: UserRole) => Promise<void>;
+  register: (username: string, password: string, name: string, role: UserRole, studyProgram?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -46,44 +48,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (emailOrName: string, password: string, role: UserRole) => {
+  const login = async (username: string, password: string, role: UserRole) => {
     // Check for librarian login
-    if (emailOrName === 'nshimiyeyves12@gmail.com' && password === 'Nshimiye2004' && role === 'librarian') {
+    if (username === 'nshimiyeyves12@gmail.com' && password === 'Nshimiye2004' && role === 'librarian') {
       const librarianUser = registeredUsers[0]; // Get pre-registered librarian
       setUser(librarianUser);
       localStorage.setItem('user', JSON.stringify(librarianUser));
       return;
     }
 
-    // For students/teachers, create a temporary session
+    // Check if user exists in registered users
+    const existingUser = registeredUsers.find(
+      (u) => u.username === username && u.role === role
+    );
+
+    if (!existingUser) {
+      throw new Error('Username or password incorrect');
+    }
+
+    // In production, would verify password hash
     const newUser: User = {
-      id: Date.now().toString(),
-      email: emailOrName.includes('@') ? emailOrName : undefined,
-      name: emailOrName.includes('@') ? emailOrName.split('@')[0] : emailOrName,
+      id: existingUser.id,
+      username,
+      name: existingUser.name,
       role,
+      studyProgram: existingUser.studyProgram,
       registeredAt: new Date().toISOString(),
     };
     setUser(newUser);
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
-  const register = async (name: string, password: string, role: UserRole) => {
+  const register = async (
+    username: string,
+    password: string,
+    name: string,
+    role: UserRole,
+    studyProgram?: string
+  ) => {
     // Check if user already exists
-    const existingUser = registeredUsers.find((u) => u.name === name);
+    const existingUser = registeredUsers.find((u) => u.username === username);
     if (existingUser) {
-      throw new Error('Name already registered');
+      throw new Error('Username already taken');
     }
 
-    // Validate password
+    // Validate inputs
+    if (username.length < 3) {
+      throw new Error('Username must be at least 3 characters');
+    }
+
     if (password.length < 4) {
       throw new Error('Password must be at least 4 characters');
     }
 
-    // Create new user (without email for students)
+    if (name.length < 2) {
+      throw new Error('Name must be at least 2 characters');
+    }
+
+    // Create new user
     const newUser: User = {
       id: Date.now().toString(),
+      username,
       name,
       role,
+      studyProgram,
       registeredAt: new Date().toISOString(),
     };
 

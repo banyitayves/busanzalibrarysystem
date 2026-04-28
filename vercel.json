@@ -1,0 +1,40 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "projectSettings": {
+    "sourceFilesOutsideRootDirectory": true
+  },
+  "env": {
+    "OPENAI_API_KEY": {
+      "description": "OpenAI API Key for AI features",
+      "example": "sk-...",
+      "required": true
+    },
+    "DB_HOST": {
+      "description": "MySQL Database Host",
+      "example": "db.example.com",
+      "required": true
+    },
+    "DB_USER": {
+      "description": "MySQL Database User",
+      "example": "root",
+      "required": true
+    },
+    "DB_PASSWORD": {
+      "description": "MySQL Database Password",
+      "required": true
+    },
+    "DB_NAME": {
+      "description": "MySQL Database Name",
+      "example": "smart_library",
+      "required": true
+    },
+    "NEXT_PUBLIC_GEMINI_API_KEY": {
+      "description": "Gemini API Key (optional)",
+      "example": "AIzaSy...",
+      "required": false
+    }
+  }
+}
