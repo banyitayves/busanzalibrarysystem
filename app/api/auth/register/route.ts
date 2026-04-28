@@ -18,6 +18,8 @@ const VALID_CLASSES = {
 };
 
 export async function POST(request: NextRequest) {
+  let connection = null;
+  
   try {
     const body = await request.json();
     const { username, password, name, role, class_name, level } = body;
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const pool = getPool();
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
 
     try {
       // Check if username already exists
@@ -99,6 +101,9 @@ export async function POST(request: NextRequest) {
 
       const userId = (result as any).insertId;
 
+      // Generate session token
+      const token = crypto.randomBytes(32).toString('hex');
+
       return NextResponse.json(
         {
           message: 'Registration successful',
@@ -110,11 +115,14 @@ export async function POST(request: NextRequest) {
             class_name: class_name || null,
             level: level || null,
           },
+          token,
         },
         { status: 201 }
       );
     } finally {
-      await connection.end();
+      if (connection) {
+        await connection.end();
+      }
     }
   } catch (error) {
     console.error('Registration error:', error);

@@ -71,14 +71,19 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(data.error || `Registration failed (${response.status}): ${data.details || ''}`);
       }
 
       // Store user info and redirect
       localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      console.error('Registration error:', err);
+      const message = err instanceof Error ? err.message : 'Registration failed';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

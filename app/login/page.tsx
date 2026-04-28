@@ -31,14 +31,17 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || `Login failed (${response.status}): ${data.details || ''}`);
       }
 
       // Store user info and redirect
       localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.token);
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      console.error('Login error:', err);
+      const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -48,10 +51,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-          📚 Smart Library
+          📚 GS Busanza Smart Library
         </h1>
         <p className="text-gray-600 text-center mb-8">
-          AI-Powered Learning Platform
+          AI-Powered Learning Platform, twige neza dukoresheje ikoranabuhanga
         </p>
 
         {error && (

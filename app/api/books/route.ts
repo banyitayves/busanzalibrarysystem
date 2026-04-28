@@ -19,6 +19,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Check file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large. Maximum 100MB allowed' }, { status: 413 });
+    }
+
+    // Check file type
+    const allowedTypes = ['application/pdf', 'text/plain'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Only PDF and TXT files are supported' }, { status: 400 });
+    }
+
     // Save file to public/uploads
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
     if (!fs.existsSync(uploadsDir)) {

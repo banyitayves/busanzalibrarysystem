@@ -38,12 +38,29 @@ export async function initializeDatabase() {
         file_path VARCHAR(255) NOT NULL,
         file_type VARCHAR(50),
         file_content LONGTEXT,
+        file_size BIGINT DEFAULT 0,
+        is_document BOOLEAN DEFAULT FALSE,
         upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         uploaded_by INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+        INDEX (created_at),
+        INDEX (uploaded_by)
       )
     `);
+
+    // Alter table to add columns if they don't exist
+    try {
+      await connection.execute(`ALTER TABLE books ADD COLUMN file_size BIGINT DEFAULT 0`);
+    } catch (e) {
+      // Column might already exist
+    }
+
+    try {
+      await connection.execute(`ALTER TABLE books ADD COLUMN is_document BOOLEAN DEFAULT FALSE`);
+    } catch (e) {
+      // Column might already exist
+    }
 
     // Create Book Borrowing table
     await connection.execute(`

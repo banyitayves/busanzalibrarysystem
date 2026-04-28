@@ -9,6 +9,8 @@ function hashPassword(password: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  let connection = null;
+  
   try {
     const body = await request.json();
     const { username, password } = body;
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const pool = getPool();
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
 
     try {
       // Find user by username
@@ -82,7 +84,9 @@ export async function POST(request: NextRequest) {
         { status: 200 }
       );
     } finally {
-      await connection.end();
+      if (connection) {
+        await connection.end();
+      }
     }
   } catch (error) {
     console.error('Login error:', error);

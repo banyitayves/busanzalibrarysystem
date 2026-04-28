@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  api: {
+    bodyParser: {
+      sizeLimit: '100mb',
+    },
+    responseLimit: '100mb',
+  },
+  serverExternalPackages: ['pdf-parse'],
 };
 
 export default nextConfig;
