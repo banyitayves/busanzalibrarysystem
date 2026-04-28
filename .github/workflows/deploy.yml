@@ -27,7 +27,7 @@ jobs:
         run: npm run build
         env:
           # Build will work without these, but they're needed for full functionality
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'dummy' }}
+          NEXT_PUBLIC_GEMINI_API_KEY: ${{ secrets.NEXT_PUBLIC_GEMINI_API_KEY || 'dummy' }}
           DB_HOST: ${{ secrets.DB_HOST || 'localhost' }}
           DB_USER: ${{ secrets.DB_USER || 'root' }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'password' }}

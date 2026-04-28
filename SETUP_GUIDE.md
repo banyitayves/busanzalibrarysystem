@@ -5,7 +5,7 @@
 ### 1. **Book Management with AI-Powered Q&A**
 - Upload and manage PDF, DOCX, and TXT files
 - Automatic text extraction and processing
-- AI-generated summaries using OpenAI GPT-3.5
+- AI-generated summaries using Google Gemini
 
 ### 2. **Student Book Borrowing System**
 - Borrow and return books with due dates
@@ -15,7 +15,7 @@
 ### 3. **Intelligent Question-Answering System**
 - Ask questions about any book in the system
 - AI searches through all books to find relevant answers
-- Uses OpenAI embeddings for semantic search
+- Uses Google Gemini for semantic search
 - Returns context-aware answers from book content
 
 ### 4. **MySQL Database Integration**
@@ -28,7 +28,7 @@
 
 1. **Node.js** (v18+)
 2. **MySQL Server** (v8.0+)
-3. **OpenAI API Key** - Get from https://platform.openai.com/api-keys
+3. **Google Gemini API Key** - Get from https://aistudio.google.com/
 4. **Vercel Account** (optional, for deployment)
 
 ## Local Setup Instructions
@@ -60,11 +60,8 @@ DB_USER=root
 DB_PASSWORD=your_password_here
 DB_NAME=smart_library
 
-# OpenAI API Configuration
-OPENAI_API_KEY=sk-your-key-here
-
-# Gemini API (optional)
-NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_key_here
+# Google Gemini API Configuration
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ### Step 4: Initialize Database Tables
@@ -227,7 +224,7 @@ POST /api/books/search
 
 ```bash
 git add .
-git commit -m "Add MySQL and OpenAI integration"
+git commit -m "Add MySQL and Gemini AI integration"
 git push origin main
 ```
 
@@ -236,7 +233,7 @@ git push origin main
 1. Go to https://vercel.com/new
 2. Import your repository
 3. Add environment variables:
-   - `OPENAI_API_KEY`
+   - `NEXT_PUBLIC_GEMINI_API_KEY`
    - `DB_HOST` (your MySQL host)
    - `DB_USER` (MySQL username)
    - `DB_PASSWORD` (MySQL password)
@@ -261,10 +258,11 @@ Every push to `main` branch will automatically deploy to Vercel.
 - Check credentials in `.env.local`
 - Verify database exists: `SHOW DATABASES;`
 
-### OpenAI API Errors
-- Verify API key is correct and has credits
+### Gemini API Errors
+- Verify API key is correct and active
 - Check rate limits
 - Ensure API key has proper permissions
+- Visit https://aistudio.google.com/ to manage API keys
 
 ### File Upload Issues
 - Ensure `public/uploads` directory exists and is writable
@@ -279,6 +277,6 @@ Every push to `main` branch will automatically deploy to Vercel.
 ## Support & Additional Resources
 
 - [Next.js Documentation](https://nextjs.org/docs)
-- [OpenAI API Docs](https://platform.openai.com/docs)
+- [Google Gemini API Docs](https://ai.google.dev/docs)
 - [MySQL Documentation](https://dev.mysql.com/doc/)
 - [Vercel Documentation](https://vercel.com/docs)

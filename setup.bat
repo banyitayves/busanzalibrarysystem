@@ -82,7 +82,7 @@ if not exist ".env.local" (
     echo DB_USER=root
     echo DB_PASSWORD=your_password
     echo DB_NAME=smart_library
-    echo OPENAI_API_KEY=your_openai_key
+    echo NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
     echo.
 ) else (
     echo ✓ .env.local exists
