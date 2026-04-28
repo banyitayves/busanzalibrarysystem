@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 
 interface Book {
   id: string;
@@ -13,13 +12,29 @@ interface Book {
   created_at: string;
 }
 
-export default function BookDetailView() {
-  const params = useParams();
-  const bookId = params?.id as string;
-  
+interface Props {
+  params: Promise<{ id: string }> | { id: string };
+}
+
+export default function BookDetailView({ params }: Props) {
+  const [bookId, setBookId] = useState<string>('');
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Handle both Promise and direct params
+    const resolveParams = async () => {
+      try {
+        const resolved = await Promise.resolve(params);
+        const id = (resolved as any).id;
+        setBookId(id);
+      } catch (err) {
+        setError('Failed to load book ID');
+      }
+    };
+    resolveParams();
+  }, [params]);
 
   useEffect(() => {
     if (!bookId) return;
