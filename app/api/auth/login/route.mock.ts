@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase } from '@/lib/mongodb';
+
+// Mock users - stored in memory for testing
+const MOCK_USERS = [
+  {
+    id: 1,
+    username: 'student1',
+    password: 'password123',
+    name: 'John Student',
+    role: 'student',
+    level: 'S6',
+    class_name: 'S6 LFK',
+  },
+  {
+    id: 2,
+    username: 'teacher1',
+    password: 'password123',
+    name: 'Jane Teacher',
+    role: 'teacher',
+  },
+  {
+    id: 3,
+    username: 'librarian1',
+    password: 'password123',
+    name: 'Admin Librarian',
+    role: 'librarian',
+  },
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,14 +40,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = await getDatabase();
-    const usersCollection = db.collection('users');
-
-    // Find user by username and password
-    const user = await usersCollection.findOne({
-      username: username.toLowerCase(),
-      password: password, // In production, use bcrypt for hashing
-    });
+    // Find user in mock data
+    const user = MOCK_USERS.find(
+      (u) => u.username === username && u.password === password
+    );
 
     if (!user) {
       return NextResponse.json(
@@ -35,14 +57,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: 'Login successful',
+        message: 'Login successful (MOCK MODE - No Database)',
         user: {
-          id: user._id.toString(),
+          id: user.id,
           username: user.username,
           name: user.name,
           role: user.role,
-          class_name: user.class_name || null,
-          level: user.level || null,
+          class_name: user.class_name,
+          level: user.level,
         },
         token,
       },

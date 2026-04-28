@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase } from '@/lib/mongodb';
+
+// Mock registered users - persists during dev session
+let registeredUsers = [
+  {
+    id: 1,
+    username: 'student1',
+    password: 'password123',
+    name: 'John Student',
+    role: 'student',
+    level: 'S6',
+    class_name: 'S6 LFK',
+  },
+  {
+    id: 2,
+    username: 'teacher1',
+    password: 'password123',
+    name: 'Jane Teacher',
+    role: 'teacher',
+  },
+  {
+    id: 3,
+    username: 'librarian1',
+    password: 'password123',
+    name: 'Admin Librarian',
+    role: 'librarian',
+  },
+];
 
 const VALID_CLASSES = {
   'S1': ['S1A', 'S1B', 'S1C', 'S1D'],
@@ -56,15 +82,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const db = await getDatabase();
-    const usersCollection = db.collection('users');
-
     // Check if username already exists
-    const existingUser = await usersCollection.findOne({
-      username: username.toLowerCase(),
-    });
-
-    if (existingUser) {
+    if (registeredUsers.some((u) => u.username === username)) {
       return NextResponse.json(
         { error: 'Username already taken' },
         { status: 409 }
@@ -73,25 +92,26 @@ export async function POST(request: NextRequest) {
 
     // Create new user
     const newUser = {
-      username: username.toLowerCase(),
-      password: password, // In production, use bcrypt for hashing
+      id: registeredUsers.length + 1,
+      username,
+      password,
       name,
       role,
-      class_name: class_name || null,
-      level: level || null,
-      created_at: new Date(),
+      class_name: class_name || undefined,
+      level: level || undefined,
     };
 
-    const result = await usersCollection.insertOne(newUser);
+    // Add to mock users
+    registeredUsers.push(newUser);
 
     // Generate token
     const token = crypto.randomBytes(32).toString('hex');
 
     return NextResponse.json(
       {
-        message: 'Registration successful',
+        message: 'Registration successful (MOCK MODE - No Database)',
         user: {
-          id: result.insertedId.toString(),
+          id: newUser.id,
           username,
           name,
           role,
