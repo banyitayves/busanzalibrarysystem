@@ -93,12 +93,20 @@ export default function BorrowBooksSection() {
                 <span>{book.file_type.toUpperCase()}</span>
                 <span>{new Date(book.created_at).toLocaleDateString()}</span>
               </div>
-              <button
-                onClick={() => handleBorrow(book.id)}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-              >
-                Borrow Book
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.location.href = `/books/${book.id}`}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                >
+                  📖 Read
+                </button>
+                <button
+                  onClick={() => handleBorrow(book.id)}
+                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm"
+                >
+                  📚 Borrow
+                </button>
+              </div>
             </div>
           ))}
         </div>

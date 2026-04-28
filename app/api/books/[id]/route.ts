@@ -1,47 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getPool from '@/lib/db';
-import { generateAnswerFromContext, findRelevantContext } from '@/lib/openai-service';
-import { splitTextIntoChunks } from '@/lib/file-processor';
+import { getDatabase } from '@/lib/mongodb';
+import { getMockBooks } from '@/lib/mock-storage';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
-    const pool = getPool();
-    const connection = await pool.getConnection();
-    try {
-      if (action === 'summary') {
-        // Get book summary
-        const [summary] = await connection.execute(
-          `SELECT summary FROM book_summaries WHERE book_id = ?`,
-          [id]
-        );
+    const db = await getDatabase();
+    let book: any = null;
 
-        if (!summary || (summary as any[]).length === 0) {
-          return NextResponse.json({ summary: 'No summary available' });
-        }
+    if (db) {
+      // Try MongoDB
+      const booksCollection = db.collection('books');
+      book = await booksCollection.findOne({ _id: id });
+    } else {
+      // Fallback to in-memory storage
+      const mockBooks = getMockBooks();
+      book = mockBooks.find(b => b._id === id);
+    }
 
-        return NextResponse.json((summary as any)[0]);
-      } else {
-        // Get book details
-        const [book] = await connection.execute(
-          `SELECT id, title, author, description, file_type, file_content, created_at FROM books WHERE id = ?`,
-          [id]
-        );
+    if (!book) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
 
-        if (!book || (book as any[]).length === 0) {
-          return NextResponse.json({ error: 'Book not found' }, { status: 404 });
-        }
-
-        return NextResponse.json((book as any)[0]);
-      }
-    } finally {
-      await connection.end();
+    if (action === 'summary') {
+      // Return book summary (for now, return first paragraph)
+      const firstParagraph = book.file_content?.split('\n\n')[0] || 'No summary available';
+      return NextResponse.json({ 
+        summary: firstParagraph,
+        book_id: book._id,
+      });
+    } else {
+      // Return full book details with content
+      return NextResponse.json({
+        id: book._id,
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        file_type: book.file_type,
+        file_content: book.file_content,
+        file_path: book.file_path,
+        uploaded_by: book.uploaded_by,
+        created_at: book.created_at,
+      });
     }
   } catch (error) {
     console.error('Error fetching book:', error);

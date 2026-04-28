@@ -4,25 +4,32 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize Gemini AI client
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
 
-export async function generateAnswer(question: string): Promise<string> {
+export async function generateAnswer(question: string, context?: string): Promise<string> {
   // Check if API key is available
   if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
     console.log('Gemini API key not available, using mock response');
-    return generateMockAnswer(question);
+    return generateMockAnswer(question, context);
   }
 
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    const result = await model.generateContent(
-      `You are a helpful educational assistant. Please provide a clear, concise answer to this question:\n\n${question}\n\nAnswer should be informative but not too long (2-3 paragraphs).`
-    );
+    
+    let prompt = `You are a helpful educational assistant. Please provide a clear, concise answer to this question:\n\n${question}`;
+    
+    if (context) {
+      prompt = `You are a helpful educational assistant. Based on the following educational material, please answer the student's question. If the material doesn't contain relevant information, provide a helpful general answer.\n\nEducational Material:\n${context}\n\nStudent Question: ${question}\n\nProvide a clear, concise answer (2-3 paragraphs).`;
+    } else {
+      prompt += `\n\nAnswer should be informative but not too long (2-3 paragraphs).`;
+    }
+    
+    const result = await model.generateContent(prompt);
 
     const response = await result.response;
     const text = response.text();
-    return text || generateMockAnswer(question);
+    return text || generateMockAnswer(question, context);
   } catch (error) {
     console.error('Error with Gemini API:', error);
-    return generateMockAnswer(question);
+    return generateMockAnswer(question, context);
   }
 }
 
@@ -57,7 +64,14 @@ export async function generateSummary(bookContent: string): Promise<string> {
 }
 
 // Mock implementations (fallback when API is not available)
-function generateMockAnswer(question: string): string {
+function generateMockAnswer(question: string, context?: string): string {
+  // If we have context, use it to provide a better answer
+  if (context && context.length > 50) {
+    const contextLines = context.split('\n').filter(l => l.trim());
+    const relevantLines = contextLines.slice(0, 3).join(' ');
+    return `Based on the provided material:\n\n${relevantLines}\n\nRegarding your question "${question}": ${generateMockAnswer(question)}`;
+  }
+  
   const mockAnswers: Record<string, string> = {
     'what is nodejs':
       'Node.js is a JavaScript runtime built on Chrome\'s V8 JavaScript engine. It allows you to run JavaScript outside the browser, making it perfect for server-side development. Key features include non-blocking I/O, event-driven architecture, and npm package ecosystem.',

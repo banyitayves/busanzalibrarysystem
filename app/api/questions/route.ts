@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAnswer } from '@/lib/ai-service';
 import { getDatabase } from '@/lib/mongodb';
-import { getMockQuestions, findMockQuestion, findMockQuestions, addMockQuestion, updateMockQuestion } from '@/lib/mock-storage';
+import { getMockQuestions, findMockQuestion, findMockQuestions, addMockQuestion, updateMockQuestion, getMockBooks } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,16 +55,63 @@ export async function POST(request: NextRequest) {
 
     console.log(`❓ New question from ${studentName}: ${question.substring(0, 50)}...`);
 
-    // Generate AI answer
+    // Search for relevant book content to use as context
+    let context = '';
+    const db = await getDatabase();
+    
+    if (bookId) {
+      // If a specific book is mentioned, get its content
+      if (db) {
+        const booksCollection = db.collection('books');
+        const book = await booksCollection.findOne({ _id: bookId });
+        if (book && book.file_content) {
+          context = book.file_content.substring(0, 2000); // Use first 2000 chars as context
+        }
+      } else {
+        // Search in mock storage
+        const mockBooks = getMockBooks();
+        const book = mockBooks.find(b => b._id === bookId);
+        if (book && book.file_content) {
+          context = book.file_content.substring(0, 2000);
+        }
+      }
+    } else {
+      // Try to find relevant books by searching content for keywords
+      const questionWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      let relevantBooks: any[] = [];
+      
+      if (db) {
+        const booksCollection = db.collection('books');
+        relevantBooks = await booksCollection
+          .find({})
+          .toArray();
+      } else {
+        relevantBooks = getMockBooks();
+      }
+      
+      // Find books with content matching the question
+      for (const book of relevantBooks) {
+        if (book.file_content) {
+          const bookContent = book.file_content.toLowerCase();
+          const matchCount = questionWords.filter(word => bookContent.includes(word)).length;
+          
+          if (matchCount > 0) {
+            context += `\n\n[From "${book.title}"]:\n${book.file_content.substring(0, 1000)}`;
+            if (context.length > 3000) break; // Limit context size
+          }
+        }
+      }
+    }
+
+    // Generate AI answer with context
     let answer;
     try {
-      answer = await generateAnswer(question);
+      answer = await generateAnswer(question, context || undefined);
     } catch (aiError) {
       console.error('AI answer generation failed:', aiError);
       answer = `I'm having trouble generating an answer right now. This question has been recorded and will be reviewed by our teaching team. Thank you for your inquiry!`;
     }
 
-    const db = await getDatabase();
     const questionId = `q_${Date.now()}`;
     
     const newQuestion = {
