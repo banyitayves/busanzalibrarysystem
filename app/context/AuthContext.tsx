@@ -5,35 +5,24 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 export type UserRole = 'librarian' | 'student' | 'teacher' | null;
 
 interface User {
-  id: string;
-  email?: string;
+  id: string | number;
+  username?: string;
   name: string;
   role: UserRole;
-  registeredAt?: string;
-  username?: string;
-  studyProgram?: string; // For students
+  class_name?: string;
+  level?: string;
+  email?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, role: UserRole) => Promise<void>;
-  register: (username: string, password: string, name: string, role: UserRole, studyProgram?: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string, name: string, role: UserRole, level?: string, className?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// In-memory user storage (in production, use a database)
-let registeredUsers: User[] = [
-  {
-    id: 'lib-001',
-    email: 'nshimiyeyves12@gmail.com',
-    name: 'Librarian YVES',
-    role: 'librarian',
-    registeredAt: new Date().toISOString(),
-  },
-];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -43,40 +32,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('user');
+      }
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string, role: UserRole) => {
-    // Check for librarian login
-    if (username === 'nshimiyeyves12@gmail.com' && password === 'Nshimiye2004' && role === 'librarian') {
-      const librarianUser = registeredUsers[0]; // Get pre-registered librarian
-      setUser(librarianUser);
-      localStorage.setItem('user', JSON.stringify(librarianUser));
-      return;
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      const userData: User = {
+        id: data.user.id,
+        username: data.user.username,
+        name: data.user.name,
+        role: data.user.role,
+        class_name: data.user.class_name,
+        level: data.user.level,
+      };
+
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      throw error;
     }
-
-    // Check if user exists in registered users
-    const existingUser = registeredUsers.find(
-      (u) => u.username === username && u.role === role
-    );
-
-    if (!existingUser) {
-      throw new Error('Username or password incorrect');
-    }
-
-    // In production, would verify password hash
-    const newUser: User = {
-      id: existingUser.id,
-      username,
-      name: existingUser.name,
-      role,
-      studyProgram: existingUser.studyProgram,
-      registeredAt: new Date().toISOString(),
-    };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const register = async (
@@ -84,40 +77,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     name: string,
     role: UserRole,
-    studyProgram?: string
+    level?: string,
+    className?: string
   ) => {
-    // Check if user already exists
-    const existingUser = registeredUsers.find((u) => u.username === username);
-    if (existingUser) {
-      throw new Error('Username already taken');
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          name,
+          role,
+          level: role === 'student' ? level : null,
+          class_name: role === 'student' ? className : null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      const userData: User = {
+        id: data.user.id,
+        username: data.user.username,
+        name: data.user.name,
+        role: data.user.role,
+        class_name: data.user.class_name,
+        level: data.user.level,
+      };
+
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      throw error;
     }
-
-    // Validate inputs
-    if (username.length < 3) {
-      throw new Error('Username must be at least 3 characters');
-    }
-
-    if (password.length < 4) {
-      throw new Error('Password must be at least 4 characters');
-    }
-
-    if (name.length < 2) {
-      throw new Error('Name must be at least 2 characters');
-    }
-
-    // Create new user
-    const newUser: User = {
-      id: Date.now().toString(),
-      username,
-      name,
-      role,
-      studyProgram,
-      registeredAt: new Date().toISOString(),
-    };
-
-    registeredUsers.push(newUser);
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
   };
 
   const logout = () => {
@@ -132,10 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

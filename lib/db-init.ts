@@ -5,6 +5,29 @@ export async function initializeDatabase() {
   const connection = await pool.getConnection();
   
   try {
+    // Create Users table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        email VARCHAR(255) UNIQUE,
+        username VARCHAR(100) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        class_name VARCHAR(50),
+        level VARCHAR(20),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX (email),
+        INDEX (username),
+        INDEX (role),
+        INDEX (class_name),
+        INDEX (level),
+        INDEX (created_at)
+      )
+    `);
+
     // Create Books table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS books (
