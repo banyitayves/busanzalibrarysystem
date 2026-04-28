@@ -25,8 +25,16 @@ export default function BorrowBooksSection() {
     try {
       const response = await fetch('/api/books');
       const data = await response.json();
-      setBooks(data);
+      
+      if (!response.ok || !Array.isArray(data)) {
+        setBooks([]);
+        console.warn('Books API returned invalid data:', data);
+      } else {
+        setBooks(data);
+      }
     } catch (error) {
+      console.error('Error loading books:', error);
+      setBooks([]);
       setMessage(`Error loading books: ${String(error)}`);
     } finally {
       setLoading(false);

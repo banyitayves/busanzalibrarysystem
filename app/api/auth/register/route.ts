@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase, getMockUsers, setMockUsers } from '@/lib/mongodb';
 
 const VALID_CLASSES = {
   'S1': ['S1A', 'S1B', 'S1C', 'S1D'],
@@ -57,32 +57,67 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDatabase();
-    const usersCollection = db.collection('users');
+    let existingUser;
+    let newUser;
+    let insertedId;
 
-    // Check if username already exists
-    const existingUser = await usersCollection.findOne({
-      username: username.toLowerCase(),
-    });
+    if (db) {
+      // Try MongoDB
+      const usersCollection = db.collection('users');
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Username already taken' },
-        { status: 409 }
+      existingUser = await usersCollection.findOne({
+        username: username.toLowerCase(),
+      });
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'Username already taken' },
+          { status: 409 }
+        );
+      }
+
+      newUser = {
+        username: username.toLowerCase(),
+        password: password,
+        name,
+        role,
+        class_name: class_name || null,
+        level: level || null,
+        created_at: new Date(),
+      };
+
+      const result = await usersCollection.insertOne(newUser);
+      insertedId = result.insertedId.toString();
+    } else {
+      // Fallback to in-memory storage
+      const mockUsers = getMockUsers();
+      
+      existingUser = mockUsers.find(
+        (u) => u.username.toLowerCase() === username.toLowerCase()
       );
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'Username already taken' },
+          { status: 409 }
+        );
+      }
+
+      newUser = {
+        _id: crypto.randomBytes(12).toString('hex'),
+        username: username.toLowerCase(),
+        password: password,
+        name,
+        role,
+        class_name: class_name || null,
+        level: level || null,
+        created_at: new Date(),
+      };
+
+      mockUsers.push(newUser);
+      setMockUsers(mockUsers);
+      insertedId = newUser._id;
     }
-
-    // Create new user
-    const newUser = {
-      username: username.toLowerCase(),
-      password: password, // In production, use bcrypt for hashing
-      name,
-      role,
-      class_name: class_name || null,
-      level: level || null,
-      created_at: new Date(),
-    };
-
-    const result = await usersCollection.insertOne(newUser);
 
     // Generate token
     const token = crypto.randomBytes(32).toString('hex');
@@ -91,7 +126,7 @@ export async function POST(request: NextRequest) {
       {
         message: 'Registration successful',
         user: {
-          id: result.insertedId.toString(),
+          id: insertedId,
           username,
           name,
           role,

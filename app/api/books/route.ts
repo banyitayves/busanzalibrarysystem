@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import getPool from '@/lib/db';
+import { getDatabase } from '@/lib/mongodb';
 import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-processor';
 import { generateBookSummary } from '@/lib/openai-service';
 import { v4 as uuidv4 } from 'uuid';
+
+// Mock books storage
+let mockBooks: any[] = [];
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,45 +49,48 @@ export async function POST(request: NextRequest) {
     const fileContent = await extractTextFromFile(filePath);
     const cleanedContent = cleanText(fileContent.text);
 
-    // Save to database
-    const pool = getPool();
-    const connection = await pool.getConnection();
-    try {
-      const [result] = await connection.execute(
-        `INSERT INTO books (title, author, description, file_path, file_type, file_content, uploaded_by) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          title,
-          author,
-          description,
-          `/uploads/${fileName}`,
-          fileContent.fileType,
-          cleanedContent,
-          userId || null,
-        ]
-      );
+    const db = await getDatabase();
+    const bookId = uuidv4();
+    const newBook = {
+      _id: bookId,
+      title,
+      author,
+      description,
+      file_path: `/uploads/${fileName}`,
+      file_type: fileContent.fileType,
+      file_content: cleanedContent,
+      uploaded_by: userId || null,
+      created_at: new Date(),
+    };
 
-      const bookId = (result as any).insertId;
-
-      // Generate and save summary
-      try {
-        const summary = await generateBookSummary(cleanedContent, title);
-        await connection.execute(
-          `INSERT INTO book_summaries (book_id, summary) VALUES (?, ?)`,
-          [bookId, summary]
-        );
-      } catch (summaryError) {
-        console.error('Error generating summary:', summaryError);
-        // Continue even if summary generation fails
-      }
-
-      return NextResponse.json(
-        { id: bookId, message: 'Book uploaded successfully' },
-        { status: 201 }
-      );
-    } finally {
-      await connection.end();
+    if (db) {
+      // Try MongoDB
+      const booksCollection = db.collection('books');
+      await booksCollection.insertOne(newBook);
+    } else {
+      // Fallback to in-memory storage
+      mockBooks.push(newBook);
     }
+
+    // Generate summary (optional, don't fail if it errors)
+    try {
+      const summary = await generateBookSummary(cleanedContent, title);
+      if (db) {
+        const summariesCollection = db.collection('book_summaries');
+        await summariesCollection.insertOne({
+          book_id: bookId,
+          summary,
+          created_at: new Date(),
+        });
+      }
+    } catch (summaryError) {
+      console.error('Error generating summary:', summaryError);
+    }
+
+    return NextResponse.json(
+      { id: bookId, message: 'Book uploaded successfully' },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error uploading book:', error);
     return NextResponse.json(
@@ -96,17 +102,34 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const pool = getPool();
-    const connection = await pool.getConnection();
-    try {
-      const [books] = await connection.execute(
-        `SELECT id, title, author, description, file_type, created_at FROM books ORDER BY created_at DESC LIMIT 100`
-      );
+    const db = await getDatabase();
+    let books: any[] = [];
 
-      return NextResponse.json(books);
-    } finally {
-      await connection.end();
+    if (db) {
+      // Try MongoDB
+      const booksCollection = db.collection('books');
+      books = await booksCollection
+        .find({})
+        .project({ id: 1, title: 1, author: 1, description: 1, file_type: 1, created_at: 1 })
+        .sort({ created_at: -1 })
+        .limit(100)
+        .toArray();
+    } else {
+      // Fallback to in-memory storage
+      books = mockBooks
+        .map(b => ({
+          id: b._id,
+          title: b.title,
+          author: b.author,
+          description: b.description,
+          file_type: b.file_type,
+          created_at: b.created_at,
+        }))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 100);
     }
+
+    return NextResponse.json(books || []);
   } catch (error) {
     console.error('Error fetching books:', error);
     return NextResponse.json({ error: 'Failed to fetch books' }, { status: 500 });

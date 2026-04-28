@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase, getMockUsers } from '@/lib/mongodb';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +15,22 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDatabase();
-    const usersCollection = db.collection('users');
+    let user;
 
-    // Find user by username and password
-    const user = await usersCollection.findOne({
-      username: username.toLowerCase(),
-      password: password, // In production, use bcrypt for hashing
-    });
+    if (db) {
+      // Try MongoDB
+      const usersCollection = db.collection('users');
+      user = await usersCollection.findOne({
+        username: username.toLowerCase(),
+        password: password,
+      });
+    } else {
+      // Fallback to in-memory storage
+      const mockUsers = getMockUsers();
+      user = mockUsers.find(
+        (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password
+      );
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -37,7 +46,7 @@ export async function POST(request: NextRequest) {
       {
         message: 'Login successful',
         user: {
-          id: user._id.toString(),
+          id: user._id?.toString?.() || user.id || '1',
           username: user.username,
           name: user.name,
           role: user.role,
