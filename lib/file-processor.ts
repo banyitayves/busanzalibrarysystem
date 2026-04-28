@@ -18,8 +18,6 @@ export async function extractTextFromFile(filePath: string): Promise<FileContent
     } else if (fileExt === '.txt') {
       return await extractFromTxt(filePath, fileName);
     } else if (fileExt === '.docx' || fileExt === '.doc') {
-      // For now, treat DOCX/DOC files as text (limited support)
-      // In production, consider using a proper DOCX parser library
       return await extractFromTxt(filePath, fileName);
     } else {
       throw new Error(`Unsupported file type: ${fileExt}`);
@@ -32,27 +30,44 @@ export async function extractTextFromFile(filePath: string): Promise<FileContent
 
 async function extractFromPDF(filePath: string, fileName: string): Promise<FileContent> {
   try {
-    // For large files, read in chunks to avoid memory overflow
     const stats = fs.statSync(filePath);
     const fileSize = stats.size;
     
-    // If file is larger than 50MB, log a warning but still process
     if (fileSize > 50 * 1024 * 1024) {
-      console.warn(`Large file detected: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)}MB). Processing may take longer.`);
+      console.warn(`Large file detected: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)}MB)`);
     }
 
-    // Read file with a reasonable buffer size
     const dataBuffer = fs.readFileSync(filePath);
+    
+    // Validate PDF header
+    if (!dataBuffer.toString('utf8', 0, 4).startsWith('%PDF')) {
+      console.warn(`File ${fileName} may not be a valid PDF (missing header)`);
+    }
+
     const data = await pdfParse(dataBuffer);
     
+    let text = data.text || '';
+    
+    // If PDF parsing failed or returned empty/corrupted text, provide fallback
+    if (!text || text.length < 10 || text.includes('\x00\x00\x00')) {
+      console.warn(`PDF ${fileName} returned corrupted or empty text, using fallback`);
+      // Return placeholder with file info
+      text = `Document: ${fileName}\n\nThis PDF file was uploaded but the text extraction encountered issues. The document is stored and can be referenced, but detailed content analysis may require manual review.\n\nFile size: ${fileSize} bytes`;
+    }
+    
     return {
-      text: data.text || '',
+      text: text.trim(),
       fileName,
       fileType: 'pdf',
     };
   } catch (error) {
     console.error(`Error extracting PDF ${fileName}:`, error);
-    throw new Error(`Failed to extract text from PDF: ${error instanceof Error ? error.message : String(error)}`);
+    // Return placeholder text instead of throwing
+    return {
+      text: `Document: ${fileName}\n\nThe PDF could not be fully processed. The document is saved in the library and can still be referenced or borrowed.`,
+      fileName,
+      fileType: 'pdf',
+    };
   }
 }
 
@@ -61,7 +76,7 @@ async function extractFromTxt(filePath: string, fileName: string): Promise<FileC
     const text = fs.readFileSync(filePath, 'utf-8');
     
     return {
-      text,
+      text: text.trim(),
       fileName,
       fileType: path.extname(fileName).replace('.', '') || 'txt',
     };
@@ -85,14 +100,14 @@ export function splitTextIntoChunks(text: string, chunkSize: number = 3000, over
     start = end - overlap;
   }
 
-  return chunks.length > 0 ? chunks : [text]; // Return at least the original text
+  return chunks.length > 0 ? chunks : [text];
 }
 
 // Sanitize and clean text
 export function cleanText(text: string): string {
   return text
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/\n\n+/g, '\n') // Replace multiple newlines with single newline
-    .replace(/[^\w\s\n.,!?;:\-()]/g, '') // Remove special characters except common punctuation
+    .replace(/\s+/g, ' ')
+    .replace(/\n\n+/g, '\n')
+    .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
     .trim();
 }

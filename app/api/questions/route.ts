@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAnswer } from '@/lib/ai-service';
+import { getDatabase } from '@/lib/mongodb';
 
-let questions: Array<{
+let mockQuestions: Array<{
   id: string;
   studentId: string;
   studentName: string;
@@ -31,45 +32,110 @@ let questions: Array<{
 ];
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const qId = searchParams.get('id');
+  try {
+    const { searchParams } = new URL(request.url);
+    const qId = searchParams.get('id');
 
-  if (qId) {
-    const question = questions.find((q) => q.id === qId);
-    return question
-      ? NextResponse.json(question)
-      : NextResponse.json({ error: 'Question not found' }, { status: 404 });
+    const db = await getDatabase();
+
+    if (db) {
+      // Try MongoDB
+      const questionsCollection = db.collection('questions');
+      
+      if (qId) {
+        const question = await questionsCollection.findOne({ _id: qId });
+        return question
+          ? NextResponse.json(question)
+          : NextResponse.json({ error: 'Question not found' }, { status: 404 });
+      }
+
+      const questions = await questionsCollection
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .toArray();
+      return NextResponse.json(questions || []);
+    } else {
+      // Fallback to in-memory
+      if (qId) {
+        const question = mockQuestions.find((q) => q.id === qId);
+        return question
+          ? NextResponse.json(question)
+          : NextResponse.json({ error: 'Question not found' }, { status: 404 });
+      }
+
+      return NextResponse.json(mockQuestions);
+    }
+  } catch (error) {
+    console.error('Error fetching questions:', error);
+    return NextResponse.json({ error: 'Failed to fetch questions' }, { status: 500 });
   }
-
-  return NextResponse.json(questions);
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { question, studentId, studentName } = body;
+    const { question, studentId, studentName, bookTitle, bookId } = body;
 
-    if (!question) {
-      return NextResponse.json({ error: 'Question required' }, { status: 400 });
+    if (!question || question.trim().length === 0) {
+      return NextResponse.json({ error: 'Question cannot be empty' }, { status: 400 });
     }
 
-    // Generate AI answer
-    const answer = await generateAnswer(question);
+    console.log(`❓ New question from ${studentName}: ${question.substring(0, 50)}...`);
 
+    // Generate AI answer
+    let answer;
+    try {
+      answer = await generateAnswer(question);
+    } catch (aiError) {
+      console.error('AI answer generation failed:', aiError);
+      answer = `I'm having trouble generating an answer right now. This question has been recorded and will be reviewed by our teaching team. Thank you for your inquiry!`;
+    }
+
+    const db = await getDatabase();
+    const questionId = `q_${Date.now()}`;
+    
     const newQuestion = {
-      id: Date.now().toString(),
+      _id: questionId,
+      id: questionId,
       studentId: studentId || 'anonymous',
-      studentName: studentName || 'Anonymous',
+      studentName: studentName || 'Anonymous Student',
       question,
       answer,
-      createdAt: new Date().toISOString(),
+      bookTitle: bookTitle || null,
+      bookId: bookId || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       likes: 0,
+      status: 'answered',
     };
 
-    questions.push(newQuestion);
+    if (db) {
+      // Try MongoDB
+      const questionsCollection = db.collection('questions');
+      await questionsCollection.insertOne(newQuestion);
+      console.log(`✅ Question saved to MongoDB: ${questionId}`);
+    } else {
+      // Fallback to in-memory
+      mockQuestions.push({
+        id: questionId,
+        studentId: newQuestion.studentId,
+        studentName: newQuestion.studentName,
+        question,
+        answer,
+        createdAt: newQuestion.createdAt.toISOString(),
+        likes: 0,
+      });
+      console.log(`✅ Question saved to memory: ${questionId}`);
+    }
+
     return NextResponse.json(newQuestion, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error posting question:', error);
+    return NextResponse.json(
+      { error: 'Failed to post question', details: String(error) },
+      { status: 500 }
+    );
   }
 }
 
@@ -78,17 +144,36 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, likes } = body;
 
-    const questionIndex = questions.findIndex((q) => q.id === id);
-    if (questionIndex === -1) {
-      return NextResponse.json({ error: 'Question not found' }, { status: 404 });
-    }
+    const db = await getDatabase();
 
-    if (likes !== undefined) {
-      questions[questionIndex].likes = likes;
-    }
+    if (db) {
+      const questionsCollection = db.collection('questions');
+      const result = await questionsCollection.updateOne(
+        { _id: id },
+        { $set: { likes: likes || 0, updatedAt: new Date() } }
+      );
 
-    return NextResponse.json(questions[questionIndex]);
+      if (result.matchedCount === 0) {
+        return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+      }
+
+      const updated = await questionsCollection.findOne({ _id: id });
+      return NextResponse.json(updated);
+    } else {
+      // Fallback to in-memory
+      const questionIndex = mockQuestions.findIndex((q) => q.id === id);
+      if (questionIndex === -1) {
+        return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+      }
+
+      if (likes !== undefined) {
+        mockQuestions[questionIndex].likes = likes;
+      }
+
+      return NextResponse.json(mockQuestions[questionIndex]);
+    }
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error updating question:', error);
+    return NextResponse.json({ error: 'Failed to update question' }, { status: 500 });
   }
 }

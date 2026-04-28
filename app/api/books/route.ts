@@ -45,8 +45,21 @@ export async function POST(request: NextRequest) {
     const buffer = await file.arrayBuffer();
     fs.writeFileSync(filePath, Buffer.from(buffer));
 
+    console.log(`📄 Processing file: ${fileName} (${file.size} bytes)`);
+
     // Extract text from file
-    const fileContent = await extractTextFromFile(filePath);
+    let fileContent;
+    try {
+      fileContent = await extractTextFromFile(filePath);
+    } catch (extractError) {
+      console.error(`Error extracting from ${fileName}:`, extractError);
+      fileContent = {
+        text: `Document: ${fileName}`,
+        fileName,
+        fileType: file.type.includes('pdf') ? 'pdf' : 'txt',
+      };
+    }
+
     const cleanedContent = cleanText(fileContent.text);
 
     const db = await getDatabase();
@@ -54,8 +67,8 @@ export async function POST(request: NextRequest) {
     const newBook = {
       _id: bookId,
       title,
-      author,
-      description,
+      author: author || 'Unknown',
+      description: description || 'No description provided',
       file_path: `/uploads/${fileName}`,
       file_type: fileContent.fileType,
       file_content: cleanedContent,
@@ -64,31 +77,25 @@ export async function POST(request: NextRequest) {
     };
 
     if (db) {
-      // Try MongoDB
       const booksCollection = db.collection('books');
       await booksCollection.insertOne(newBook);
+      console.log(`✅ Book saved to MongoDB: ${title}`);
     } else {
-      // Fallback to in-memory storage
       mockBooks.push(newBook);
+      console.log(`✅ Book saved to memory: ${title}`);
     }
 
-    // Generate summary (optional, don't fail if it errors)
-    try {
-      const summary = await generateBookSummary(cleanedContent, title);
-      if (db) {
-        const summariesCollection = db.collection('book_summaries');
-        await summariesCollection.insertOne({
-          book_id: bookId,
-          summary,
-          created_at: new Date(),
-        });
-      }
-    } catch (summaryError) {
-      console.error('Error generating summary:', summaryError);
-    }
+    // Generate summary (async, don't block the response)
+    generateSummaryAsync(cleanedContent, title, bookId, db).catch(err => 
+      console.error(`Summary generation failed for ${title}:`, err)
+    );
 
     return NextResponse.json(
-      { id: bookId, message: 'Book uploaded successfully' },
+      { 
+        id: bookId, 
+        message: '✅ Book uploaded successfully! AI summary is being generated in the background.',
+        title,
+      },
       { status: 201 }
     );
   } catch (error) {
@@ -97,6 +104,24 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to upload book', details: String(error) },
       { status: 500 }
     );
+  }
+}
+
+// Generate summary asynchronously without blocking
+async function generateSummaryAsync(content: string, title: string, bookId: string, db: any) {
+  try {
+    const summary = await generateBookSummary(content, title);
+    if (db) {
+      const summariesCollection = db.collection('book_summaries');
+      await summariesCollection.insertOne({
+        book_id: bookId,
+        summary,
+        created_at: new Date(),
+      });
+      console.log(`✅ Summary saved for: ${title}`);
+    }
+  } catch (err) {
+    console.error(`Failed to generate summary for ${title}:`, err);
   }
 }
 
