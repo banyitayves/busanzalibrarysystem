@@ -1,12 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getPool from '@/lib/db';
 import * as crypto from 'crypto';
-import { initializeDatabase } from '@/lib/db-init';
 
-// Simple password hashing function
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+// Mock users - for testing without database
+let registeredUsers = [
+  {
+    id: 1,
+    username: 'student1',
+    password: 'password123',
+    name: 'John Student',
+    role: 'student',
+    level: 'S6',
+    class_name: 'S6 LFK',
+  },
+  {
+    id: 2,
+    username: 'teacher1',
+    password: 'password123',
+    name: 'Jane Teacher',
+    role: 'teacher',
+  },
+  {
+    id: 3,
+    username: 'librarian1',
+    password: 'password123',
+    name: 'Admin Librarian',
+    role: 'librarian',
+  },
+];
 
 const VALID_CLASSES = {
   'S1': ['S1A', 'S1B', 'S1C', 'S1D'],
@@ -18,8 +38,6 @@ const VALID_CLASSES = {
 };
 
 export async function POST(request: NextRequest) {
-  let connection = null;
-  
   try {
     const body = await request.json();
     const { username, password, name, role, class_name, level } = body;
@@ -64,66 +82,46 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Initialize database if needed
-    try {
-      await initializeDatabase();
-    } catch (initError) {
-      console.error('Database initialization error:', initError);
-      // Continue - tables might already exist
-    }
-
-    const pool = getPool();
-    connection = await pool.getConnection();
-
-    try {
-      // Check if username already exists
-      const [existing] = await connection.execute(
-        'SELECT id FROM users WHERE username = ?',
-        [username]
-      );
-
-      if ((existing as any[]).length > 0) {
-        return NextResponse.json(
-          { error: 'Username already taken' },
-          { status: 409 }
-        );
-      }
-
-      // Hash password
-      const hashedPassword = hashPassword(password);
-
-      // Insert new user
-      const [result] = await connection.execute(
-        `INSERT INTO users (username, password, name, role, class_name, level, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, TRUE)`,
-        [username, hashedPassword, name, role, class_name || null, level || null]
-      );
-
-      const userId = (result as any).insertId;
-
-      // Generate session token
-      const token = crypto.randomBytes(32).toString('hex');
-
+    // Check if username already exists in mock data
+    if (registeredUsers.some((u) => u.username === username)) {
       return NextResponse.json(
-        {
-          message: 'Registration successful',
-          user: {
-            id: userId,
-            username,
-            name,
-            role,
-            class_name: class_name || null,
-            level: level || null,
-          },
-          token,
-        },
-        { status: 201 }
+        { error: 'Username already taken' },
+        { status: 409 }
       );
-    } finally {
-      if (connection) {
-        await connection.end();
-      }
     }
+
+    // Create new user
+    const newUser = {
+      id: registeredUsers.length + 1,
+      username,
+      password,
+      name,
+      role,
+      class_name: class_name || undefined,
+      level: level || undefined,
+    };
+
+    // Add to mock users (persists during dev session)
+    registeredUsers.push(newUser);
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString('hex');
+
+    return NextResponse.json(
+      {
+        message: 'Registration successful (TEST MODE)',
+        user: {
+          id: newUser.id,
+          username,
+          name,
+          role,
+          class_name: class_name || null,
+          level: level || null,
+        },
+        token,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(

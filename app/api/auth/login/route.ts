@@ -1,16 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getPool from '@/lib/db';
 import * as crypto from 'crypto';
-import { initializeDatabase } from '@/lib/db-init';
 
-// Simple password hashing function
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+// Mock users - for testing without database
+const MOCK_USERS = [
+  {
+    id: 1,
+    username: 'student1',
+    password: 'password123',
+    name: 'John Student',
+    role: 'student',
+    level: 'S6',
+    class_name: 'S6 LFK',
+  },
+  {
+    id: 2,
+    username: 'teacher1',
+    password: 'password123',
+    name: 'Jane Teacher',
+    role: 'teacher',
+  },
+  {
+    id: 3,
+    username: 'librarian1',
+    password: 'password123',
+    name: 'Admin Librarian',
+    role: 'librarian',
+  },
+];
 
 export async function POST(request: NextRequest) {
-  let connection = null;
-  
   try {
     const body = await request.json();
     const { username, password } = body;
@@ -22,72 +40,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize database if needed
-    try {
-      await initializeDatabase();
-    } catch (initError) {
-      console.error('Database initialization error:', initError);
-      // Continue - tables might already exist
-    }
+    // Find user in mock data
+    const user = MOCK_USERS.find(
+      (u) => u.username === username && u.password === password
+    );
 
-    const pool = getPool();
-    connection = await pool.getConnection();
-
-    try {
-      // Find user by username
-      const [users] = await connection.execute(
-        'SELECT id, username, name, role, class_name, level FROM users WHERE username = ? AND is_active = TRUE',
-        [username]
-      );
-
-      const user = (users as any[])[0];
-
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Invalid username or password' },
-          { status: 401 }
-        );
-      }
-
-      // Get stored password hash
-      const [userWithPassword] = await connection.execute(
-        'SELECT password FROM users WHERE id = ?',
-        [user.id]
-      );
-
-      const storedHash = (userWithPassword as any[])[0].password;
-      const hashedPassword = hashPassword(password);
-
-      if (storedHash !== hashedPassword) {
-        return NextResponse.json(
-          { error: 'Invalid username or password' },
-          { status: 401 }
-        );
-      }
-
-      // Generate session token (simple JWT-like token)
-      const token = crypto.randomBytes(32).toString('hex');
-
+    if (!user) {
       return NextResponse.json(
-        {
-          message: 'Login successful',
-          user: {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role,
-            class_name: user.class_name,
-            level: user.level,
-          },
-          token,
-        },
-        { status: 200 }
+        { error: 'Invalid username or password' },
+        { status: 401 }
       );
-    } finally {
-      if (connection) {
-        await connection.end();
-      }
     }
+
+    // Generate session token
+    const token = crypto.randomBytes(32).toString('hex');
+
+    return NextResponse.json(
+      {
+        message: 'Login successful (TEST MODE)',
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role,
+          class_name: user.class_name,
+          level: user.level,
+        },
+        token,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
