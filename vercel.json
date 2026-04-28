@@ -3,9 +3,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "projectSettings": {
-    "sourceFilesOutsideRootDirectory": true
-  },
   "env": {
     "OPENAI_API_KEY": {
       "description": "OpenAI API Key for AI features",
