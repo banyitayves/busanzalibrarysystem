@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getPool from '@/lib/db';
 import * as crypto from 'crypto';
+import { initializeDatabase } from '@/lib/db-init';
 
 // Simple password hashing function
 function hashPassword(password: string): string {
@@ -17,6 +18,14 @@ export async function POST(request: NextRequest) {
         { error: 'Username and password required' },
         { status: 400 }
       );
+    }
+
+    // Initialize database if needed
+    try {
+      await initializeDatabase();
+    } catch (initError) {
+      console.error('Database initialization error:', initError);
+      // Continue - tables might already exist
     }
 
     const pool = getPool();
