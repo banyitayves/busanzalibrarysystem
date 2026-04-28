@@ -1,35 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAnswer } from '@/lib/ai-service';
 import { getDatabase } from '@/lib/mongodb';
-
-let mockQuestions: Array<{
-  id: string;
-  studentId: string;
-  studentName: string;
-  question: string;
-  answer?: string;
-  createdAt: string;
-  likes: number;
-}> = [
-  {
-    id: '1',
-    studentId: 'demo1',
-    studentName: 'John',
-    question: 'What is the difference between var, let, and const in JavaScript?',
-    answer: 'var is function-scoped and can be redeclared. let and const are block-scoped. const cannot be reassigned after initialization. Best practice: use const by default, let when you need to reassign.',
-    createdAt: new Date().toISOString(),
-    likes: 5,
-  },
-  {
-    id: '2',
-    studentId: 'demo2',
-    studentName: 'Sarah',
-    question: 'How do I optimize database queries?',
-    answer: 'Use indexing on frequently queried columns, avoid SELECT *, use query optimization tools, implement caching, and monitor slow queries. Consider denormalization for read-heavy operations.',
-    createdAt: new Date().toISOString(),
-    likes: 3,
-  },
-];
+import { getMockQuestions, findMockQuestion, findMockQuestions, addMockQuestion, updateMockQuestion } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,13 +30,13 @@ export async function GET(request: NextRequest) {
     } else {
       // Fallback to in-memory
       if (qId) {
-        const question = mockQuestions.find((q) => q.id === qId);
+        const question = findMockQuestion({ _id: qId });
         return question
           ? NextResponse.json(question)
           : NextResponse.json({ error: 'Question not found' }, { status: 404 });
       }
 
-      return NextResponse.json(mockQuestions);
+      return NextResponse.json(getMockQuestions());
     }
   } catch (error) {
     console.error('Error fetching questions:', error);
@@ -117,13 +89,14 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Question saved to MongoDB: ${questionId}`);
     } else {
       // Fallback to in-memory
-      mockQuestions.push({
-        id: questionId,
-        studentId: newQuestion.studentId,
-        studentName: newQuestion.studentName,
-        question,
-        answer,
-        createdAt: newQuestion.createdAt.toISOString(),
+      addMockQuestion({
+        _id: questionId,
+        student_id: newQuestion.studentId,
+        student_name: newQuestion.studentName,
+        question_text: question,
+        answer_text: answer,
+        status: 'answered',
+        created_at: newQuestion.createdAt,
         likes: 0,
       });
       console.log(`✅ Question saved to memory: ${questionId}`);
@@ -161,16 +134,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(updated);
     } else {
       // Fallback to in-memory
-      const questionIndex = mockQuestions.findIndex((q) => q.id === id);
-      if (questionIndex === -1) {
+      const question = findMockQuestion({ _id: id });
+      if (!question) {
         return NextResponse.json({ error: 'Question not found' }, { status: 404 });
       }
 
       if (likes !== undefined) {
-        mockQuestions[questionIndex].likes = likes;
+        updateMockQuestion({ _id: id }, { likes });
       }
 
-      return NextResponse.json(mockQuestions[questionIndex]);
+      const updated = findMockQuestion({ _id: id });
+      return NextResponse.json(updated);
     }
   } catch (error) {
     console.error('Error updating question:', error);

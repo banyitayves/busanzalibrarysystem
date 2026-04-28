@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase, getMockUsers, setMockUsers } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/mongodb';
+import { getMockUsers, setMockUsers, addMockUser } from '@/lib/mock-storage';
 
 const VALID_CLASSES = {
   'S1': ['S1A', 'S1B', 'S1C', 'S1D'],
@@ -114,8 +115,7 @@ export async function POST(request: NextRequest) {
         created_at: new Date(),
       };
 
-      mockUsers.push(newUser);
-      setMockUsers(mockUsers);
+      addMockUser(newUser);
       insertedId = newUser._id;
     }
 

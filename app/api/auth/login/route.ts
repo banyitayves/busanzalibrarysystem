@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase, getMockUsers } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/mongodb';
+import { getMockUsers } from '@/lib/mock-storage';
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase, getMockUsers, setMockUsers } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/mongodb';
+import { getMockUsers, setMockUsers, getMockBooks, addMockBook } from '@/lib/mock-storage';
 
 const SAMPLE_BOOKS = [
   {
@@ -128,73 +129,121 @@ Biology helps us understand ourselves and our environment.`,
 export async function GET(request: NextRequest) {
   try {
     const db = await getDatabase();
-    const usersCollection = db.collection('users');
-    const booksCollection = db.collection('books');
-
-    // Check if data already exists
-    const userCount = await usersCollection.countDocuments();
-    const bookCount = await booksCollection.countDocuments();
     
-    if (userCount > 0 && bookCount > 5) {
+    // Use MongoDB if available, otherwise use in-memory storage
+    let userCount = 0;
+    let bookCount = 0;
+    
+    if (db) {
+      // MongoDB available
+      const usersCollection = db.collection('users');
+      const booksCollection = db.collection('books');
+      
+      userCount = await usersCollection.countDocuments();
+      bookCount = await booksCollection.countDocuments();
+      
+      if (userCount > 0 && bookCount > 5) {
+        return NextResponse.json(
+          { 
+            message: '✅ Database already seeded', 
+            users: userCount,
+            books: bookCount,
+            storage: 'MongoDB',
+          },
+          { status: 200 }
+        );
+      }
+
+      // Create test users if needed
+      if (userCount === 0) {
+        const testUsers = [
+          {
+            username: 'student1',
+            password: 'password123',
+            name: 'John Student',
+            role: 'student',
+            level: 'S6',
+            class_name: 'S6 LFK',
+            created_at: new Date(),
+          },
+          {
+            username: 'student2',
+            password: 'password123',
+            name: 'Alice Wonder',
+            role: 'student',
+            level: 'S5',
+            class_name: 'S5 LFK',
+            created_at: new Date(),
+          },
+          {
+            username: 'teacher1',
+            password: 'password123',
+            name: 'Jane Teacher',
+            role: 'teacher',
+            created_at: new Date(),
+          },
+          {
+            username: 'librarian1',
+            password: 'password123',
+            name: 'Admin Librarian',
+            role: 'librarian',
+            created_at: new Date(),
+          },
+        ];
+
+        await usersCollection.insertMany(testUsers);
+        console.log('✅ Test users created in MongoDB');
+      }
+
+      // Add sample books if needed
+      let booksAdded = 0;
+      if (bookCount < 5) {
+        for (const bookData of SAMPLE_BOOKS) {
+          const existing = await booksCollection.findOne({ title: bookData.title });
+          
+          if (!existing) {
+            await booksCollection.insertOne({
+              _id: `book_${bookData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`,
+              title: bookData.title,
+              author: bookData.author,
+              description: bookData.description,
+              file_type: 'txt',
+              file_content: bookData.content,
+              file_path: `/samples/${bookData.title.replace(/[^a-z0-9]/gi, '_')}`,
+              uploaded_by: 'librarian1',
+              created_at: new Date(),
+            });
+            booksAdded++;
+          }
+        }
+        console.log(`✅ ${booksAdded} sample books added to MongoDB`);
+      }
+
       return NextResponse.json(
-        { 
-          message: '✅ Database already seeded', 
-          users: userCount,
-          books: bookCount,
+        {
+          message: '✅ Database seeded successfully',
+          users_created: userCount === 0 ? 4 : 0,
+          books_added: booksAdded,
+          storage: 'MongoDB',
+          test_credentials: {
+            student: { username: 'student1', password: 'password123' },
+            teacher: { username: 'teacher1', password: 'password123' },
+            librarian: { username: 'librarian1', password: 'password123' },
+          },
         },
-        { status: 200 }
+        { status: 201 }
       );
-    }
-
-    // Create test users if needed
-    if (userCount === 0) {
-      const testUsers = [
-        {
-          username: 'student1',
-          password: 'password123',
-          name: 'John Student',
-          role: 'student',
-          level: 'S6',
-          class_name: 'S6 LFK',
-          created_at: new Date(),
-        },
-        {
-          username: 'student2',
-          password: 'password123',
-          name: 'Alice Wonder',
-          role: 'student',
-          level: 'S5',
-          class_name: 'S5 LFK',
-          created_at: new Date(),
-        },
-        {
-          username: 'teacher1',
-          password: 'password123',
-          name: 'Jane Teacher',
-          role: 'teacher',
-          created_at: new Date(),
-        },
-        {
-          username: 'librarian1',
-          password: 'password123',
-          name: 'Admin Librarian',
-          role: 'librarian',
-          created_at: new Date(),
-        },
-      ];
-
-      await usersCollection.insertMany(testUsers);
-      console.log('✅ Test users created');
-    }
-
-    // Add sample books if needed
-    let booksAdded = 0;
-    if (bookCount < 5) {
-      for (const bookData of SAMPLE_BOOKS) {
-        const existing = await booksCollection.findOne({ title: bookData.title });
-        
-        if (!existing) {
-          await booksCollection.insertOne({
+    } else {
+      // Fallback to in-memory storage
+      console.log('⚠️  MongoDB not available, using in-memory fallback for seeding');
+      
+      let mockUsers = getMockUsers();
+      
+      // Add sample books to mock storage
+      const existingBooks = getMockBooks();
+      if (existingBooks.length === 0) {
+        for (const bookData of SAMPLE_BOOKS) {
+          addMockBook({
             _id: `book_${bookData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`,
             title: bookData.title,
             author: bookData.author,
@@ -205,25 +254,44 @@ export async function GET(request: NextRequest) {
             uploaded_by: 'librarian1',
             created_at: new Date(),
           });
-          booksAdded++;
         }
+        console.log(`✅ ${SAMPLE_BOOKS.length} sample books added to in-memory storage`);
       }
-      console.log(`✅ ${booksAdded} sample books added`);
-    }
-
-    return NextResponse.json(
-      {
-        message: '✅ Database seeded successfully',
-        users_created: userCount === 0 ? 4 : 0,
-        books_added: booksAdded,
-        test_credentials: {
-          student: { username: 'student1', password: 'password123' },
-          teacher: { username: 'teacher1', password: 'password123' },
-          librarian: { username: 'librarian1', password: 'password123' },
+      
+      // If mock users are still at default, add test users
+      if (mockUsers.length === 3) {
+        const additionalUsers = [
+          {
+            _id: '4',
+            username: 'student2',
+            password: 'password123',
+            name: 'Alice Wonder',
+            role: 'student',
+            level: 'S5',
+            class_name: 'S5 LFK',
+            created_at: new Date(),
+          },
+        ];
+        mockUsers = [...mockUsers, ...additionalUsers];
+        setMockUsers(mockUsers);
+        console.log('✅ Additional test users added to in-memory storage');
+      }
+      
+      return NextResponse.json(
+        {
+          message: '✅ In-memory storage initialized (MongoDB unavailable)',
+          users_ready: mockUsers.length,
+          books_added: SAMPLE_BOOKS.length,
+          storage: 'In-Memory Fallback',
+          test_credentials: {
+            student: { username: 'student1', password: 'password123' },
+            teacher: { username: 'teacher1', password: 'password123' },
+            librarian: { username: 'librarian1', password: 'password123' },
+          },
         },
-      },
-      { status: 201 }
-    );
+        { status: 201 }
+      );
+    }
   } catch (error) {
     console.error('Seed error:', error);
     return NextResponse.json(

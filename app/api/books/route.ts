@@ -4,10 +4,8 @@ import fs from 'fs';
 import { getDatabase } from '@/lib/mongodb';
 import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-processor';
 import { generateBookSummary } from '@/lib/openai-service';
+import { addMockBook, getMockBooks } from '@/lib/mock-storage';
 import { v4 as uuidv4 } from 'uuid';
-
-// Mock books storage
-let mockBooks: any[] = [];
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,7 +79,7 @@ export async function POST(request: NextRequest) {
       await booksCollection.insertOne(newBook);
       console.log(`✅ Book saved to MongoDB: ${title}`);
     } else {
-      mockBooks.push(newBook);
+      addMockBook(newBook);
       console.log(`✅ Book saved to memory: ${title}`);
     }
 
@@ -141,6 +139,7 @@ export async function GET(request: NextRequest) {
         .toArray();
     } else {
       // Fallback to in-memory storage
+      const mockBooks = getMockBooks();
       books = mockBooks
         .map(b => ({
           id: b._id,
