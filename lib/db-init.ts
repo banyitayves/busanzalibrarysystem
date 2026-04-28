@@ -1,6 +1,7 @@
-import pool from './db';
+import getPool from './db';
 
 export async function initializeDatabase() {
+  const pool = getPool();
   const connection = await pool.getConnection();
   
   try {

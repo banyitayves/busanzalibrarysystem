@@ -1,13 +1,22 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization - only create when needed
+let openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || 'sk-dummy',
+    });
+  }
+  return openai;
+}
 
 // Generate embeddings for text chunks
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const response = await openai.embeddings.create({
+    const client = getOpenAIClient();
+    const response = await client.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
     });
@@ -26,7 +35,8 @@ export async function generateAnswerFromContext(
   bookTitle: string
 ): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
+    const client = getOpenAIClient();
+    const response = await client.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -57,7 +67,8 @@ export async function generateBookSummary(content: string, bookTitle: string): P
     const maxChars = 10000;
     const contentToSummarize = content.substring(0, maxChars);
 
-    const response = await openai.chat.completions.create({
+    const client = getOpenAIClient();
+    const response = await client.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {

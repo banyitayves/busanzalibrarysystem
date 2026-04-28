@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import pool from '@/lib/db';
+import getPool from '@/lib/db';
 import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-processor';
 import { generateBookSummary } from '@/lib/openai-service';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     const cleanedContent = cleanText(fileContent.text);
 
     // Save to database
+    const pool = getPool();
     const connection = await pool.getConnection();
     try {
       const [result] = await connection.execute(
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const pool = getPool();
     const connection = await pool.getConnection();
     try {
       const [books] = await connection.execute(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import getPool from '@/lib/db';
 import { generateAnswerFromContext, findRelevantContext } from '@/lib/openai-service';
 import { splitTextIntoChunks } from '@/lib/file-processor';
 
@@ -12,6 +12,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
+    const pool = getPool();
     const connection = await pool.getConnection();
     try {
       if (action === 'summary') {
@@ -57,6 +58,7 @@ export async function POST(
     const body = await request.json();
     const { action, studentId, question, dueDate } = body;
 
+    const pool = getPool();
     const connection = await pool.getConnection();
     try {
       if (action === 'borrow') {

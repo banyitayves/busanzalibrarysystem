@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import getPool from '@/lib/db';
 import { generateAnswerFromContext, findRelevantContext } from '@/lib/openai-service';
 import { splitTextIntoChunks } from '@/lib/file-processor';
 
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const pool = getPool();
     const connection = await pool.getConnection();
     try {
       // Search for books by title, author, or description
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const pool = getPool();
     const connection = await pool.getConnection();
     try {
       // Get all books
