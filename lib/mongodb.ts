@@ -3,6 +3,8 @@ import { MongoClient, Db } from 'mongodb';
 let cachedClient: MongoClient | null = null;
 let cachedDb: Db | null = null;
 let isConnected = false;
+let connectionFailedAt: number | null = null;
+const CONNECTION_FAILURE_CACHE_MS = 30000; // Cache failure for 30 seconds
 
 // Mock in-memory storage for when MongoDB is not available
 let mockUsers: any[] = [
@@ -35,8 +37,14 @@ let mockUsers: any[] = [
 ];
 
 async function connectToDatabase(): Promise<{ client: MongoClient | null; db: Db | null }> {
+  // Return cached connection if available
   if (cachedClient && cachedDb && isConnected) {
     return { client: cachedClient, db: cachedDb };
+  }
+
+  // Skip connection attempt if recently failed (within cache window)
+  if (connectionFailedAt && Date.now() - connectionFailedAt < CONNECTION_FAILURE_CACHE_MS) {
+    return { client: null, db: null };
   }
 
   const uri = process.env.MONGODB_URI;
@@ -48,8 +56,9 @@ async function connectToDatabase(): Promise<{ client: MongoClient | null; db: Db
 
   try {
     const client = new MongoClient(uri, { 
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 2000, // Reduced from 5000 for faster fallback
+      connectTimeoutMS: 2000,
+      socketTimeoutMS: 2000,
     });
     await client.connect();
     
@@ -58,6 +67,7 @@ async function connectToDatabase(): Promise<{ client: MongoClient | null; db: Db
     cachedClient = client;
     cachedDb = db;
     isConnected = true;
+    connectionFailedAt = null; // Reset failure cache on successful connection
     
     console.log('✅ Connected to MongoDB');
     return { client, db };
@@ -66,6 +76,7 @@ async function connectToDatabase(): Promise<{ client: MongoClient | null; db: Db
     isConnected = false;
     cachedClient = null;
     cachedDb = null;
+    connectionFailedAt = Date.now(); // Cache the failure time
     return { client: null, db: null };
   }
 }
