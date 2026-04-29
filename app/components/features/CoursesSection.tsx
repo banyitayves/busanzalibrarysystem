@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface Course {
   id: string;
@@ -16,24 +17,107 @@ interface Course {
 }
 
 export default function CoursesSection() {
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [enrolledCourses, setEnrolledCourses] = useState<string[]>([]);
+  const [enrollingCourses, setEnrollingCourses] = useState<Set<string>>(new Set());
+  const [enrollmentMessage, setEnrollmentMessage] = useState<{ id: string; message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+    if (user?.id) {
+      fetchEnrolledCourses();
+    }
+  }, [user?.id]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/courses');
       const data = await response.json();
+      // Filter by instructor (in demo, show all)
       setCourses(data);
     } catch (error) {
       console.error('Error fetching courses:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEnrolledCourses = async () => {
+    try {
+      const response = await fetch(`/api/courses/enroll?studentId=${user?.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEnrolledCourses(data.map((course: any) => course.id));
+      }
+    } catch (error) {
+      console.error('Error fetching enrolled courses:', error);
+    }
+  };
+
+  const handleEnroll = async (courseId: string) => {
+    if (!user?.id) {
+      setEnrollmentMessage({
+        id: courseId,
+        message: 'Please log in to enroll',
+        type: 'error',
+      });
+      return;
+    }
+
+    setEnrollingCourses(prev => new Set([...prev, courseId]));
+
+    try {
+      const response = await fetch('/api/courses/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: user.id,
+          courseId: courseId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEnrolledCourses(prev => [...prev, courseId]);
+        setEnrollmentMessage({
+          id: courseId,
+          message: '✅ Successfully enrolled!',
+          type: 'success',
+        });
+        // Clear message after 3 seconds
+        setTimeout(() => setEnrollmentMessage(null), 3000);
+      } else if (data.alreadyEnrolled) {
+        setEnrolledCourses(prev => [...prev, courseId]);
+        setEnrollmentMessage({
+          id: courseId,
+          message: 'Already enrolled in this course',
+          type: 'error',
+        });
+      } else {
+        setEnrollmentMessage({
+          id: courseId,
+          message: data.error || 'Failed to enroll',
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+      setEnrollmentMessage({
+        id: courseId,
+        message: 'Error enrolling in course',
+        type: 'error',
+      });
+    } finally {
+      setEnrollingCourses(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(courseId);
+        return newSet;
+      });
     }
   };
 
@@ -115,9 +199,35 @@ export default function CoursesSection() {
                   </div>
                 )}
 
-                <button className="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition font-semibold text-sm">
-                  Enroll Now
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleEnroll(course.id)}
+                    disabled={enrolledCourses.includes(course.id) || enrollingCourses.has(course.id)}
+                    className={`w-full px-4 py-2 rounded hover:transition font-semibold text-sm ${
+                      enrolledCourses.includes(course.id)
+                        ? 'bg-green-600 text-white cursor-default hover:bg-green-600'
+                        : enrollingCourses.has(course.id)
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-indigo-600 text-white rounded hover:bg-indigo-700'
+                    }`}
+                  >
+                    {enrolledCourses.includes(course.id)
+                      ? '✅ Enrolled'
+                      : enrollingCourses.has(course.id)
+                      ? '⏳ Enrolling...'
+                      : 'Enroll Now'}
+                  </button>
+
+                  {enrollmentMessage?.id === course.id && (
+                    <div className={`text-xs p-2 rounded text-center ${
+                      enrollmentMessage.type === 'success'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {enrollmentMessage.message}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}

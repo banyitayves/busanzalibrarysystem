@@ -84,31 +84,71 @@ export async function generateSummary(bookContent: string): Promise<string> {
 
 // Mock implementations (fallback when API is not available)
 function generateMockAnswer(question: string, context?: string): string {
-  // If we have context, use it to provide a better answer
+  // If we have context, extract relevant information from it
   if (context && context.length > 50) {
-    const contextLines = context.split('\n').filter(l => l.trim());
-    const relevantLines = contextLines.slice(0, 3).join(' ');
-    return `Based on the provided material:\n\n${relevantLines}\n\nRegarding your question "${question}": ${generateMockAnswer(question)}`;
+    // Extract the book title and author from context
+    const bookMatch = context.match(/\[📖 From: "(.+?)" by (.+?)\]/);
+    const bookTitle = bookMatch ? bookMatch[1] : 'the provided material';
+    const authorName = bookMatch ? bookMatch[2] : '';
+    
+    // Extract key information from context
+    const sentences = context
+      .split(/[.!?]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 20 && s.length < 200)
+      .slice(0, 4);
+    
+    let answer = `Based on the provided material from ${bookTitle}${authorName ? ` by ${authorName}` : ''}:\n\n`;
+    
+    // Try to match keywords from the question with context
+    const questionWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    
+    // Find relevant sentences that contain question keywords
+    const relevantSentences = sentences.filter(sentence => 
+      questionWords.some(word => sentence.toLowerCase().includes(word))
+    );
+    
+    if (relevantSentences.length > 0) {
+      answer += relevantSentences.join('\n\n');
+    } else {
+      // If no exact match, provide the first few sentences from context
+      answer += sentences.slice(0, 2).join('\n\n');
+    }
+    
+    answer += `\n\n📌 For more detailed information, please refer to the full material or consult with your instructor.`;
+    return answer;
   }
   
+  // Enhanced mock answers for common questions
   const mockAnswers: Record<string, string> = {
-    'what is nodejs':
-      'Node.js is a JavaScript runtime built on Chrome\'s V8 JavaScript engine. It allows you to run JavaScript outside the browser, making it perfect for server-side development. Key features include non-blocking I/O, event-driven architecture, and npm package ecosystem.',
-    'how to learn javascript':
-      'To learn JavaScript effectively: 1) Master basics (variables, functions, objects) 2) Understand DOM manipulation 3) Learn async/await and Promises 4) Practice with projects 5) Study design patterns. Start with fundamentals before moving to frameworks like React or Vue.',
-    'what is machine learning':
-      'Machine Learning is a subset of AI where systems learn from data without being explicitly programmed. It involves training algorithms on large datasets to recognize patterns. Types include supervised learning (labeled data), unsupervised learning (unlabeled data), and reinforcement learning (learning through rewards).',
+    'newton\'s law': 
+      `Newton's Laws of Motion explain how objects move and interact:\n\n1. First Law (Inertia): Objects at rest stay at rest, and objects in motion stay in motion unless acted upon by an external force.\n\n2. Second Law (F=ma): The force on an object is equal to its mass times its acceleration. Stronger forces produce greater acceleration.\n\n3. Third Law (Action-Reaction): For every action, there is an equal and opposite reaction.\n\nEveryday examples: Wearing seatbelts (First Law), accelerating a car (Second Law), and the recoil from throwing a ball (Third Law).`,
+    
+    'jsx':
+      `JSX stands for JavaScript XML. It's a syntax extension for React that allows you to write HTML-like code in JavaScript.\n\nKey points:\n- JSX gets compiled to JavaScript function calls\n- You can embed JavaScript expressions using curly braces {}\n- JSX elements are just syntactic sugar for React.createElement()\n- Example: <div>Hello {name}</div> compiles to React.createElement('div', null, 'Hello ', name)\n\nJSX makes React code more readable and maintainable.`,
+    
+    'react hook':
+      `React Hooks are functions that let you use state and other React features in functional components.\n\nCommon hooks:\n- useState: Manages component state\n- useEffect: Performs side effects\n- useContext: Accesses context values\n- useReducer: Manages complex state logic\n- useCallback: Memoizes callbacks\n- useMemo: Memoizes computed values\n\nHooks follow two important rules:\n1. Only call hooks at the top level\n2. Only call hooks from React function components or custom hooks`,
+    
+    'machine learning':
+      `Machine Learning is a subset of AI where systems learn from data without being explicitly programmed.\n\nTypes of Machine Learning:\n1. Supervised Learning: Uses labeled data (e.g., classification, regression)\n2. Unsupervised Learning: Finds patterns in unlabeled data (e.g., clustering)\n3. Reinforcement Learning: Learns through rewards and penalties\n\nCommon algorithms include decision trees, neural networks, and support vector machines. ML is used in recommendation systems, image recognition, and natural language processing.`,
+    
+    'python data science':
+      `Python is excellent for data science due to powerful libraries:\n\n- NumPy: Numerical computing and array operations\n- Pandas: Data manipulation and analysis\n- Matplotlib: Data visualization\n- Scikit-learn: Machine learning algorithms\n- Jupyter: Interactive notebooks for data exploration\n\nWorkflow: Load data with Pandas → Analyze with NumPy → Visualize with Matplotlib → Build models with Scikit-learn`,
   };
 
-  const key = question.toLowerCase().trim();
-  for (const [mockKey, answer] of Object.entries(mockAnswers)) {
-    if (key.includes(mockKey) || mockKey.includes(key.split(' ')[0])) {
+  // Search for matching key from question
+  const questionLower = question.toLowerCase();
+  for (const [key, answer] of Object.entries(mockAnswers)) {
+    if (questionLower.includes(key)) {
       return answer;
     }
   }
 
-  return `Based on the question "${question}", here's a comprehensive answer:\n\nThis is an important topic in modern education and learning. The answer depends on several factors including context, level of detail required, and specific use case.\n\nKey points to consider:\n1. Understanding fundamentals is crucial\n2. Practice and experimentation build expertise\n3. Resources and community support accelerate learning\n4. Consistency and dedication lead to mastery\n\nFor more detailed information, please consult specialized resources or ask a domain expert.`;
+  // If no exact match, provide a generic but educational response
+  return `**Understanding "${question}"**\n\nThis is an important topic in learning and development. Here are key points to consider:\n\n1. **Fundamentals First**: Build a strong foundation in the basic concepts\n2. **Practice**: Apply your knowledge through practical exercises and projects\n3. **Resources**: Utilize books, online courses, and community forums\n4. **Collaboration**: Discuss and learn from peers and mentors\n5. **Consistency**: Regular study and practice lead to mastery\n\nConsider breaking down complex topics into smaller, manageable parts and gradually increase the difficulty level.\n\n💡 **Tip**: Try asking follow-up questions about specific aspects you don't understand, or request examples and use cases.`;
 }
+
 
 function generateMockSummary(bookContent: string): string {
   const lines = bookContent.split('\n').filter((line) => line.trim());

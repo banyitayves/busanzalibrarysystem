@@ -142,6 +142,44 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Create Courses table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS courses (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        instructor VARCHAR(255),
+        category VARCHAR(100),
+        video_url VARCHAR(500),
+        duration VARCHAR(50),
+        students_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX (category),
+        INDEX (created_at)
+      )
+    `);
+
+    // Create Course Enrollments table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS course_enrollments (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        student_id INT NOT NULL,
+        course_id INT NOT NULL,
+        enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        progress INT DEFAULT 0,
+        completed BOOLEAN DEFAULT FALSE,
+        completed_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_enrollment (student_id, course_id),
+        INDEX (student_id),
+        INDEX (course_id),
+        INDEX (enrolled_at)
+      )
+    `);
+
     console.log('Database tables initialized successfully');
   } catch (error) {
     console.error('Error initializing database:', error);
