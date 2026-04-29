@@ -70,17 +70,13 @@ export async function POST(request: NextRequest) {
         );
       } catch (dbError) {
         console.log('MongoDB error, using in-memory fallback for enrollment');
-        throw dbError; // Will fall back to in-memory
+        // Fall through to in-memory storage below
       }
-    } else {
-      throw new Error('No database connection');
     }
-  } catch (error) {
-    console.error('Database error, using in-memory fallback:', error);
-    
+
     // Fallback to in-memory storage
     const existingEnrollment = enrollments.find(
-      e => e.student_id === body.studentId && e.course_id === body.courseId
+      e => e.student_id === studentId && e.course_id === courseId
     );
 
     if (existingEnrollment) {
@@ -93,14 +89,14 @@ export async function POST(request: NextRequest) {
     const enrollmentId = `enroll_${Date.now()}`;
     enrollments.push({
       id: enrollmentId,
-      student_id: body.studentId,
-      course_id: body.courseId,
+      student_id: studentId,
+      course_id: courseId,
       enrolled_at: new Date(),
       progress: 0,
       completed: false,
     });
 
-    console.log(`✅ Student ${body.studentId} enrolled in course ${body.courseId} (in-memory)`);
+    console.log(`✅ Student ${studentId} enrolled in course ${courseId} (in-memory)`);
 
     return NextResponse.json(
       {
@@ -109,6 +105,12 @@ export async function POST(request: NextRequest) {
         message: 'Successfully enrolled in course!',
       },
       { status: 201 }
+    );
+  } catch (error) {
+    console.error('Enrollment error:', error);
+    return NextResponse.json(
+      { error: 'Failed to enroll in course', details: String(error) },
+      { status: 500 }
     );
   }
 }

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       {
         message: 'Login successful',
         user: {
-          id: user._id?.toString?.() || user.id || '1',
+          id: typeof user._id === 'string' ? user._id : String(user._id),
           username: user.username,
           name: user.name,
           role: user.role,

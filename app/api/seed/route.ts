@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
           
           if (!existing) {
             await booksCollection.insertOne({
-              _id: `book_${bookData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`,
+              book_id: `book_${bookData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`,
               title: bookData.title,
               author: bookData.author,
               description: bookData.description,
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
               file_path: `/samples/${bookData.title.replace(/[^a-z0-9]/gi, '_')}`,
               uploaded_by: 'librarian1',
               created_at: new Date(),
-            });
+            } as any);
             booksAdded++;
           }
         }

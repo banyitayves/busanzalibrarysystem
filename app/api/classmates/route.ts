@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
 
     if (db) {
       // Try MongoDB
-      const usersCollection = db.collection('users');
+      const usersCollection = (db.collection('users') as any);
 
       if (userId) {
         // Get classmates for a specific user
-        const user = await usersCollection.findOne({ _id: userId });
+        const user = await usersCollection.findOne({ user_id: userId } as any);
 
         if (user && user.class_name) {
           classmates = await usersCollection
@@ -39,14 +39,21 @@ export async function GET(request: NextRequest) {
               is_active: { $ne: false }
             })
             .project({ 
-              _id: 1, 
+              user_id: 1, 
               username: 1, 
               name: 1, 
               class_name: 1, 
               role: 1 
             })
             .sort({ name: 1 })
-            .toArray();
+            .toArray()
+            .then((docs: any[]) => docs.map((d: any) => ({
+              _id: d.user_id,
+              username: d.username,
+              name: d.name,
+              class_name: d.class_name,
+              role: d.role
+            })));
         } else if (classNameParam) {
           // Fallback to using classNameParam if user not found
           classmates = await usersCollection
@@ -55,14 +62,21 @@ export async function GET(request: NextRequest) {
               is_active: { $ne: false }
             })
             .project({ 
-              _id: 1, 
+              user_id: 1, 
               username: 1, 
               name: 1, 
               class_name: 1, 
               role: 1 
             })
             .sort({ name: 1 })
-            .toArray();
+            .toArray()
+            .then((docs: any[]) => docs.map((d: any) => ({
+              _id: d.user_id,
+              username: d.username,
+              name: d.name,
+              class_name: d.class_name,
+              role: d.role
+            })));
         }
       } else if (classNameParam) {
         // Get all students in a specific class
@@ -72,14 +86,21 @@ export async function GET(request: NextRequest) {
             is_active: { $ne: false }
           })
           .project({ 
-            _id: 1, 
+            user_id: 1, 
             username: 1, 
             name: 1, 
             class_name: 1, 
             role: 1 
           })
           .sort({ name: 1 })
-          .toArray();
+          .toArray()
+          .then((docs: any[]) => docs.map((d: any) => ({
+            _id: d.user_id,
+            username: d.username,
+            name: d.name,
+            class_name: d.class_name,
+            role: d.role
+          })));
       }
     } else {
       // Fallback to mock data

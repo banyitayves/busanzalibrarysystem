@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       const questionsCollection = db.collection('questions');
       
       if (qId) {
-        const question = await questionsCollection.findOne({ _id: qId });
+        const question = await questionsCollection.findOne({ question_id: qId } as any);
         return question
           ? NextResponse.json(question)
           : NextResponse.json({ error: 'Question not found' }, { status: 404 });
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       const questionLower = question.toLowerCase();
       const questionWords = questionLower
         .split(/[\s\-,.!?;:]+/)
-        .filter(w => w.length > 2);
+        .filter((w: string) => w.length > 2);
       
       let relevantBooks: any[] = [];
       
@@ -145,16 +145,16 @@ export async function POST(request: NextRequest) {
     const questionId = `q_${Date.now()}`;
     
     const newQuestion = {
-      _id: questionId,
+      question_id: questionId,
       id: questionId,
-      studentId: studentId || 'anonymous',
-      studentName: studentName || 'Anonymous Student',
-      question,
-      answer,
-      bookTitle: bookTitle || null,
-      bookId: bookId || null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      student_id: studentId || 'anonymous',
+      student_name: studentName || 'Anonymous Student',
+      question_text: question,
+      answer_text: answer,
+      book_title: bookTitle || null,
+      book_id: bookId || null,
+      created_at: new Date(),
+      updated_at: new Date(),
       likes: 0,
       status: 'answered',
     };
@@ -162,18 +162,18 @@ export async function POST(request: NextRequest) {
     if (db) {
       // Try MongoDB
       const questionsCollection = db.collection('questions');
-      await questionsCollection.insertOne(newQuestion);
+      await questionsCollection.insertOne(newQuestion as any);
       console.log(`✅ Question saved to MongoDB: ${questionId}`);
     } else {
       // Fallback to in-memory
       addMockQuestion({
         _id: questionId,
-        student_id: newQuestion.studentId,
-        student_name: newQuestion.studentName,
+        student_id: newQuestion.student_id,
+        student_name: newQuestion.student_name,
         question_text: question,
         answer_text: answer,
         status: 'answered',
-        created_at: newQuestion.createdAt,
+        created_at: newQuestion.created_at,
         likes: 0,
       });
       console.log(`✅ Question saved to memory: ${questionId}`);

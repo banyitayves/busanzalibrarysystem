@@ -45,10 +45,10 @@ async function seedCoursesIfEmpty() {
     if (count === 0) {
       await coursesCollection.insertMany(
         DEFAULT_COURSES.map((course, index) => ({
-          _id: `course_${index + 1}`,
+          course_id: `course_${index + 1}`,
           ...course,
           created_at: new Date(),
-        }))
+        })) as any
       );
       console.log(`✅ ${DEFAULT_COURSES.length} default courses seeded to MongoDB`);
     }
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
       const coursesCollection = db.collection('courses');
       
       if (cId) {
-        const course = await coursesCollection.findOne({ _id: cId });
+        const course = await coursesCollection.findOne({ course_id: cId } as any);
         return NextResponse.json(
           course || { error: 'Course not found' },
           course ? { status: 200 } : { status: 404 }
@@ -198,27 +198,31 @@ export async function POST(request: NextRequest) {
         id: result.insertedId,
         ...newCourse,
       }, { status: 201 });
+    } else {
+      // Fallback to in-memory if no database
+      const newCourse = {
+        id: Date.now().toString(),
+        title,
+        description,
+        instructor,
+        category: category || 'General',
+        videoUrl,
+        sampleQuestions: sampleQuestions || [],
+        students: 0,
+        duration: duration || 'Self-paced',
+        createdAt: new Date().toISOString(),
+      };
+
+      inMemoryCourses.push(newCourse);
+      return NextResponse.json(newCourse, { status: 201 });
     }
   } catch (error) {
     console.error('Error creating course:', error);
+    return NextResponse.json(
+      { error: 'Failed to create course', details: String(error) },
+      { status: 500 }
+    );
   }
-
-  // Fallback to in-memory
-  const newCourse = {
-    id: Date.now().toString(),
-    title: body.title,
-    description: body.description,
-    instructor: body.instructor,
-    category: body.category || 'General',
-    videoUrl: body.videoUrl,
-    sampleQuestions: body.sampleQuestions || [],
-    students: 0,
-    duration: body.duration || 'Self-paced',
-    createdAt: new Date().toISOString(),
-  };
-
-  inMemoryCourses.push(newCourse);
-  return NextResponse.json(newCourse, { status: 201 });
 }
 
 export async function PUT(request: NextRequest) {
@@ -230,28 +234,32 @@ export async function PUT(request: NextRequest) {
     if (db) {
       const coursesCollection = db.collection('courses');
       const result = await coursesCollection.findOneAndUpdate(
-        { _id: id },
+        { course_id: id },
         { $set: updates },
         { returnDocument: 'after' }
       );
       
-      if (result.value) {
+      if (result && result.value) {
         return NextResponse.json(result.value);
       }
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+    } else {
+      // Fallback to in-memory if no database
+      const courseIndex = inMemoryCourses.findIndex((c) => c.id === id);
+      if (courseIndex === -1) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+      }
+
+      inMemoryCourses[courseIndex] = { ...inMemoryCourses[courseIndex], ...updates };
+      return NextResponse.json(inMemoryCourses[courseIndex]);
     }
   } catch (error) {
     console.error('Error updating course:', error);
+    return NextResponse.json(
+      { error: 'Failed to update course', details: String(error) },
+      { status: 500 }
+    );
   }
-
-  // Fallback to in-memory
-  const courseIndex = inMemoryCourses.findIndex((c) => c.id === body.id);
-  if (courseIndex === -1) {
-    return NextResponse.json({ error: 'Course not found' }, { status: 404 });
-  }
-
-  inMemoryCourses[courseIndex] = { ...inMemoryCourses[courseIndex], ...body };
-  return NextResponse.json(inMemoryCourses[courseIndex]);
 }
 
 export async function DELETE(request: NextRequest) {
@@ -266,16 +274,20 @@ export async function DELETE(request: NextRequest) {
     const db = await getDatabase();
     if (db) {
       const coursesCollection = db.collection('courses');
-      await coursesCollection.deleteOne({ _id: id });
+      await coursesCollection.deleteOne({ course_id: id });
+      return NextResponse.json({ success: true });
+    } else {
+      // Fallback to in-memory
+      inMemoryCourses = inMemoryCourses.filter((c) => c.id !== id);
       return NextResponse.json({ success: true });
     }
   } catch (error) {
     console.error('Error deleting course:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete course', details: String(error) },
+      { status: 500 }
+    );
   }
-
-  // Fallback to in-memory
-  inMemoryCourses = inMemoryCourses.filter((c) => c.id !== searchParams.get('id'));
-  return NextResponse.json({ success: true });
 }
 
 // Initialize courses when the module loads

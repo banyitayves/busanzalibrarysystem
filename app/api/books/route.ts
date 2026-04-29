@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
     const bookId = uuidv4();
     const newBook = {
-      _id: bookId,
+      book_id: bookId,
       title,
       author: author || 'Unknown',
       description: description || 'No description provided',
@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
 
     if (db) {
       const booksCollection = db.collection('books');
-      await booksCollection.insertOne(newBook);
+      await booksCollection.insertOne(newBook as any);
       console.log(`✅ Book saved to MongoDB: ${title}`);
     } else {
-      addMockBook(newBook);
+      addMockBook(newBook as any);
       console.log(`✅ Book saved to memory: ${title}`);
     }
 
