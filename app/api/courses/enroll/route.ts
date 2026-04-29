@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getPool from '@/lib/db';
+import { getDatabase } from '@/lib/mongodb';
 
-// In-memory enrollment storage as fallback
+// In-memory enrollment storage (for when MongoDB is unavailable)
 let enrollments: Array<{
   id: string;
   student_id: string;
@@ -23,9 +23,64 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if student already enrolled
+    const db = await getDatabase();
+
+    if (db) {
+      try {
+        const enrollmentsCollection = db.collection('course_enrollments');
+
+        // Check if student already enrolled
+        const existingEnrollment = await enrollmentsCollection.findOne({
+          student_id: studentId,
+          course_id: courseId,
+        });
+
+        if (existingEnrollment) {
+          return NextResponse.json(
+            { error: 'Already enrolled in this course', alreadyEnrolled: true },
+            { status: 409 }
+          );
+        }
+
+        // Create enrollment
+        const result = await enrollmentsCollection.insertOne({
+          student_id: studentId,
+          course_id: courseId,
+          enrolled_at: new Date(),
+          progress: 0,
+          completed: false,
+        });
+
+        // Update course student count
+        const coursesCollection = db.collection('courses');
+        await coursesCollection.updateOne(
+          { _id: courseId },
+          { $inc: { students_count: 1 } }
+        );
+
+        console.log(`✅ Student ${studentId} enrolled in course ${courseId}`);
+
+        return NextResponse.json(
+          {
+            success: true,
+            enrollmentId: result.insertedId.toString(),
+            message: 'Successfully enrolled in course!',
+          },
+          { status: 201 }
+        );
+      } catch (dbError) {
+        console.log('MongoDB error, using in-memory fallback for enrollment');
+        throw dbError; // Will fall back to in-memory
+      }
+    } else {
+      throw new Error('No database connection');
+    }
+  } catch (error) {
+    console.error('Database error, using in-memory fallback:', error);
+    
+    // Fallback to in-memory storage
     const existingEnrollment = enrollments.find(
-      e => e.student_id === studentId && e.course_id === courseId
+      e => e.student_id === body.studentId && e.course_id === body.courseId
     );
 
     if (existingEnrollment) {
@@ -35,80 +90,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to save to database first
-    try {
-      const pool = getPool();
-      const connection = await pool.getConnection();
+    const enrollmentId = `enroll_${Date.now()}`;
+    enrollments.push({
+      id: enrollmentId,
+      student_id: body.studentId,
+      course_id: body.courseId,
+      enrolled_at: new Date(),
+      progress: 0,
+      completed: false,
+    });
 
-      try {
-        // Check if student already enrolled
-        const [existingEnrollment] = await connection.query(
-          'SELECT id FROM course_enrollments WHERE student_id = ? AND course_id = ?',
-          [studentId, courseId]
-        ) as any[];
+    console.log(`✅ Student ${body.studentId} enrolled in course ${body.courseId} (in-memory)`);
 
-        if (existingEnrollment.length > 0) {
-          return NextResponse.json(
-            { error: 'Already enrolled in this course', alreadyEnrolled: true },
-            { status: 409 }
-          );
-        }
-
-        // Create enrollment
-        const [result] = await connection.query(
-          'INSERT INTO course_enrollments (student_id, course_id, enrolled_at) VALUES (?, ?, NOW())',
-          [studentId, courseId]
-        ) as any[];
-
-        // Increment course students count
-        await connection.query(
-          'UPDATE courses SET students_count = students_count + 1 WHERE id = ?',
-          [courseId]
-        );
-
-        console.log(`✅ Student ${studentId} enrolled in course ${courseId}`);
-
-        return NextResponse.json(
-          {
-            success: true,
-            enrollmentId: result.insertId,
-            message: 'Successfully enrolled in course!',
-          },
-          { status: 201 }
-        );
-      } finally {
-        await connection.end();
-      }
-    } catch (dbError) {
-      console.log('Database unavailable, using in-memory fallback for enrollment');
-      
-      // Fallback to in-memory storage
-      const enrollmentId = `enroll_${Date.now()}`;
-      enrollments.push({
-        id: enrollmentId,
-        student_id: studentId,
-        course_id: courseId,
-        enrolled_at: new Date(),
-        progress: 0,
-        completed: false,
-      });
-
-      console.log(`✅ Student ${studentId} enrolled in course ${courseId} (in-memory)`);
-
-      return NextResponse.json(
-        {
-          success: true,
-          enrollmentId,
-          message: 'Successfully enrolled in course!',
-        },
-        { status: 201 }
-      );
-    }
-  } catch (error) {
-    console.error('Error enrolling in course:', error);
     return NextResponse.json(
-      { error: 'Failed to enroll in course', details: String(error) },
-      { status: 500 }
+      {
+        success: true,
+        enrollmentId,
+        message: 'Successfully enrolled in course!',
+      },
+      { status: 201 }
     );
   }
 }
@@ -125,38 +125,42 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Try to fetch from database first
-    try {
-      const pool = getPool();
-      const connection = await pool.getConnection();
+    const db = await getDatabase();
 
+    if (db) {
       try {
+        const enrollmentsCollection = db.collection('course_enrollments');
+        const coursesCollection = db.collection('courses');
+
         // Get enrolled courses for student
-        const [enrolledCourses] = await connection.query(
-          `SELECT c.*, ce.enrolled_at, ce.progress, ce.completed
-           FROM course_enrollments ce
-           JOIN courses c ON ce.course_id = c.id
-           WHERE ce.student_id = ?
-           ORDER BY ce.enrolled_at DESC`,
-          [studentId]
-        ) as any[];
+        const studentEnrollments = await enrollmentsCollection
+          .find({ student_id: studentId })
+          .toArray();
 
-        return NextResponse.json(enrolledCourses || []);
-      } finally {
-        await connection.end();
+        // Fetch course details for each enrollment
+        const enrolledCourses = await Promise.all(
+          studentEnrollments.map(async (enrollment: any) => {
+            const course = await coursesCollection.findOne({ 
+              _id: enrollment.course_id 
+            });
+            return { ...course, ...enrollment };
+          })
+        );
+
+        return NextResponse.json(enrolledCourses);
+      } catch (dbError) {
+        console.log('MongoDB error, using in-memory fallback');
+        throw dbError;
       }
-    } catch (dbError) {
-      console.log('Database unavailable, using in-memory fallback');
+    } else {
+      throw new Error('No database connection');
     }
-
-    // Fallback to in-memory storage
-    const studentEnrollments = enrollments.filter(e => e.student_id === studentId);
-    return NextResponse.json(studentEnrollments);
   } catch (error) {
-    console.error('Error fetching enrollments:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch enrollments', details: String(error) },
-      { status: 500 }
-    );
+    console.log('Database unavailable, using in-memory fallback');
+    const { searchParams } = new URL(request.url);
+    
+    // Fallback to in-memory storage
+    const studentEnrollments = enrollments.filter(e => e.student_id === searchParams.get('studentId'));
+    return NextResponse.json(studentEnrollments);
   }
 }

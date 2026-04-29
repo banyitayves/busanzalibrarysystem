@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import getPool from '@/lib/db';
+import { getDatabase } from '@/lib/mongodb';
 
 const DEFAULT_COURSES = [
   {
@@ -7,54 +7,53 @@ const DEFAULT_COURSES = [
     description: 'Learn the basics of React including components, hooks, and state management',
     instructor: 'Sarah Johnson',
     category: 'Web Development',
-    video_url: 'https://example.com/react-basics',
+    videoUrl: 'https://example.com/react-basics',
+    sampleQuestions: ['What is JSX?', 'How do hooks work?', 'What is the virtual DOM?'],
     duration: '8 weeks',
-    sample_questions: JSON.stringify(['What is JSX?', 'How do hooks work?', 'What is the virtual DOM?']),
+    students_count: 245,
   },
   {
     title: 'Python for Data Science',
     description: 'Master Python programming for data analysis and machine learning',
     instructor: 'Dr. Michael Chen',
     category: 'Data Science',
-    video_url: 'https://example.com/python-ds',
+    videoUrl: 'https://example.com/python-ds',
+    sampleQuestions: ['What are pandas and NumPy?', 'How do you handle missing data?', 'What is matplotlib?'],
     duration: '10 weeks',
-    sample_questions: JSON.stringify(['What are pandas and NumPy?', 'How do you handle missing data?', 'What is matplotlib?']),
+    students_count: 189,
   },
   {
     title: 'Web Design Essentials',
     description: 'Create beautiful and responsive websites with HTML, CSS, and JavaScript',
     instructor: 'Emma Davis',
     category: 'Design',
-    video_url: 'https://example.com/web-design',
+    videoUrl: 'https://example.com/web-design',
+    sampleQuestions: ['What is responsive design?', 'How do you use CSS Grid?', 'What is accessibility?'],
     duration: '6 weeks',
-    sample_questions: JSON.stringify(['What is responsive design?', 'How do you use CSS Grid?', 'What is accessibility?']),
+    students_count: 312,
   },
 ];
 
 async function seedCoursesIfEmpty() {
   try {
-    const pool = getPool();
-    const connection = await pool.getConnection();
+    const db = await getDatabase();
+    if (!db) return;
+
+    const coursesCollection = db.collection('courses');
+    const count = await coursesCollection.countDocuments();
     
-    try {
-      const [courses] = await connection.query('SELECT COUNT(*) as count FROM courses') as any[];
-      
-      if (courses[0].count === 0) {
-        for (const course of DEFAULT_COURSES) {
-          await connection.query(
-            `INSERT INTO courses (title, description, instructor, category, video_url, duration, students_count) 
-             VALUES (?, ?, ?, ?, ?, ?, 0)`,
-            [course.title, course.description, course.instructor, course.category, course.video_url, course.duration]
-          );
-        }
-        console.log(`✅ ${DEFAULT_COURSES.length} default courses seeded`);
-      }
-    } finally {
-      await connection.end();
+    if (count === 0) {
+      await coursesCollection.insertMany(
+        DEFAULT_COURSES.map((course, index) => ({
+          _id: `course_${index + 1}`,
+          ...course,
+          created_at: new Date(),
+        }))
+      );
+      console.log(`✅ ${DEFAULT_COURSES.length} default courses seeded to MongoDB`);
     }
   } catch (error) {
-    console.error('Error seeding courses:', error);
-    // Fail silently, will use in-memory fallback
+    console.error('Error seeding courses to MongoDB:', error);
   }
 }
 
@@ -126,36 +125,28 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category');
 
   try {
-    const pool = getPool();
-    const connection = await pool.getConnection();
-    
-    try {
-      // Try to fetch from database
-      const [dbCourses] = await connection.query(
-        'SELECT id, title, description, instructor, category, video_url as videoUrl, duration, students_count as students, created_at as createdAt FROM courses'
-      ) as any[];
+    const db = await getDatabase();
+    if (db) {
+      const coursesCollection = db.collection('courses');
       
-      if (dbCourses && dbCourses.length > 0) {
-        let filtered = dbCourses;
-        
-        if (cId) {
-          return NextResponse.json(
-            filtered.find((c: any) => c.id === parseInt(cId)) || { error: 'Course not found' },
-            filtered.find((c: any) => c.id === parseInt(cId)) ? { status: 200 } : { status: 404 }
-          );
-        }
-        
-        if (category) {
-          filtered = filtered.filter((c: any) => c.category === category);
-        }
-        
-        return NextResponse.json(filtered);
+      if (cId) {
+        const course = await coursesCollection.findOne({ _id: cId });
+        return NextResponse.json(
+          course || { error: 'Course not found' },
+          course ? { status: 200 } : { status: 404 }
+        );
       }
-    } finally {
-      await connection.end();
+
+      let query: any = {};
+      if (category) {
+        query.category = category;
+      }
+
+      const courses = await coursesCollection.find(query).toArray();
+      return NextResponse.json(courses);
     }
   } catch (error) {
-    console.error('Database error, falling back to in-memory:', error);
+    console.error('MongoDB error, falling back to in-memory:', error);
   }
 
   // Fallback to in-memory storage
@@ -187,56 +178,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Try to save to database
-    try {
-      const pool = getPool();
-      const connection = await pool.getConnection();
-      
-      try {
-        const [result] = await connection.query(
-          `INSERT INTO courses (title, description, instructor, category, video_url, duration, students_count) 
-           VALUES (?, ?, ?, ?, ?, ?, 0)`,
-          [title, description, instructor, category || 'General', videoUrl || '', duration || 'Self-paced']
-        ) as any[];
-        
-        return NextResponse.json({
-          id: result.insertId,
-          title,
-          description,
-          instructor,
-          category: category || 'General',
-          videoUrl,
-          sampleQuestions: sampleQuestions || [],
-          students: 0,
-          duration: duration || 'Self-paced',
-          createdAt: new Date().toISOString(),
-        }, { status: 201 });
-      } finally {
-        await connection.end();
-      }
-    } catch (dbError) {
-      console.error('Database error, using in-memory:', dbError);
+    const db = await getDatabase();
+    if (db) {
+      const coursesCollection = db.collection('courses');
+      const newCourse = {
+        title,
+        description,
+        instructor,
+        category: category || 'General',
+        videoUrl,
+        sampleQuestions: sampleQuestions || [],
+        students_count: 0,
+        duration: duration || 'Self-paced',
+        created_at: new Date(),
+      };
+
+      const result = await coursesCollection.insertOne(newCourse);
+      return NextResponse.json({
+        id: result.insertedId,
+        ...newCourse,
+      }, { status: 201 });
     }
-
-    // Fallback to in-memory
-    const newCourse = {
-      id: Date.now().toString(),
-      title,
-      description,
-      instructor,
-      category: category || 'General',
-      videoUrl,
-      sampleQuestions: sampleQuestions || [],
-      students: 0,
-      duration: duration || 'Self-paced',
-      createdAt: new Date().toISOString(),
-    };
-
-    inMemoryCourses.push(newCourse);
-    return NextResponse.json(newCourse, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error creating course:', error);
   }
+
+  // Fallback to in-memory
+  const newCourse = {
+    id: Date.now().toString(),
+    title: body.title,
+    description: body.description,
+    instructor: body.instructor,
+    category: body.category || 'General',
+    videoUrl: body.videoUrl,
+    sampleQuestions: body.sampleQuestions || [],
+    students: 0,
+    duration: body.duration || 'Self-paced',
+    createdAt: new Date().toISOString(),
+  };
+
+  inMemoryCourses.push(newCourse);
+  return NextResponse.json(newCourse, { status: 201 });
 }
 
 export async function PUT(request: NextRequest) {
@@ -244,16 +226,32 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, ...updates } = body;
 
-    const courseIndex = inMemoryCourses.findIndex((c) => c.id === id);
-    if (courseIndex === -1) {
+    const db = await getDatabase();
+    if (db) {
+      const coursesCollection = db.collection('courses');
+      const result = await coursesCollection.findOneAndUpdate(
+        { _id: id },
+        { $set: updates },
+        { returnDocument: 'after' }
+      );
+      
+      if (result.value) {
+        return NextResponse.json(result.value);
+      }
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
-
-    inMemoryCourses[courseIndex] = { ...inMemoryCourses[courseIndex], ...updates };
-    return NextResponse.json(inMemoryCourses[courseIndex]);
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error updating course:', error);
   }
+
+  // Fallback to in-memory
+  const courseIndex = inMemoryCourses.findIndex((c) => c.id === body.id);
+  if (courseIndex === -1) {
+    return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+  }
+
+  inMemoryCourses[courseIndex] = { ...inMemoryCourses[courseIndex], ...body };
+  return NextResponse.json(inMemoryCourses[courseIndex]);
 }
 
 export async function DELETE(request: NextRequest) {
@@ -265,12 +263,23 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID required' }, { status: 400 });
     }
 
-    inMemoryCourses = inMemoryCourses.filter((c) => c.id !== id);
-    return NextResponse.json({ success: true });
+    const db = await getDatabase();
+    if (db) {
+      const coursesCollection = db.collection('courses');
+      await coursesCollection.deleteOne({ _id: id });
+      return NextResponse.json({ success: true });
+    }
   } catch (error) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    console.error('Error deleting course:', error);
   }
+
+  // Fallback to in-memory
+  inMemoryCourses = inMemoryCourses.filter((c) => c.id !== searchParams.get('id'));
+  return NextResponse.json({ success: true });
 }
+
+// Initialize courses when the module loads
+seedCoursesIfEmpty();
 
 // Initialize courses when the module loads
 seedCoursesIfEmpty();

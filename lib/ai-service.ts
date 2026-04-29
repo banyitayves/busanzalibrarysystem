@@ -2,12 +2,31 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini AI client
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
+let genAI: GoogleGenerativeAI | null = null;
+
+function initializeGenAI() {
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  if (apiKey && apiKey.trim().length > 0 && apiKey !== 'AIzaSyDk7ND1F0_pYw8uTh-K9G_EqZgB_3x5qPo') {
+    try {
+      genAI = new GoogleGenerativeAI(apiKey);
+      console.log('✅ Gemini AI initialized with valid API key');
+      return true;
+    } catch (error) {
+      console.log('⚠️  Failed to initialize Gemini AI:', error);
+      return false;
+    }
+  } else {
+    console.log('⚠️  Gemini API key not configured or is placeholder. Using mock answers.');
+    return false;
+  }
+}
+
+// Initialize on module load
+const isGeminiReady = initializeGenAI();
 
 export async function generateAnswer(question: string, context?: string): Promise<string> {
-  // Check if API key is available
-  if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-    console.log('Gemini API key not available, using mock response');
+  // Use mock response if Gemini is not available
+  if (!genAI || !isGeminiReady) {
     return generateMockAnswer(question, context);
   }
 
@@ -53,9 +72,8 @@ Provide an informative answer (2-3 paragraphs) that would be helpful for a stude
 }
 
 export async function generateSummary(bookContent: string): Promise<string> {
-  // Check if API key is available
-  if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-    console.log('Gemini API key not available, using mock summary');
+  // Use mock summary if Gemini is not available
+  if (!genAI || !isGeminiReady) {
     return generateMockSummary(bookContent);
   }
 
