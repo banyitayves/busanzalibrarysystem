@@ -17,31 +17,44 @@ export async function GET(request: NextRequest) {
       if (qId) {
         const question = await questionsCollection.findOne({ question_id: qId } as any);
         return question
-          ? NextResponse.json(question)
+          ? NextResponse.json(transformQuestion(question))
           : NextResponse.json({ error: 'Question not found' }, { status: 404 });
       }
 
       const questions = await questionsCollection
         .find({})
-        .sort({ createdAt: -1 })
+        .sort({ created_at: -1 })
         .limit(100)
         .toArray();
-      return NextResponse.json(questions || []);
+      return NextResponse.json((questions || []).map(transformQuestion));
     } else {
       // Fallback to in-memory
       if (qId) {
         const question = findMockQuestion({ _id: qId });
         return question
-          ? NextResponse.json(question)
+          ? NextResponse.json(transformQuestion(question))
           : NextResponse.json({ error: 'Question not found' }, { status: 404 });
       }
 
-      return NextResponse.json(getMockQuestions());
+      return NextResponse.json(getMockQuestions().map(transformQuestion));
     }
   } catch (error) {
     console.error('Error fetching questions:', error);
     return NextResponse.json({ error: 'Failed to fetch questions' }, { status: 500 });
   }
+}
+
+// Transform database fields to camelCase for frontend
+function transformQuestion(question: any) {
+  return {
+    id: question.question_id || question.id || question._id,
+    studentId: question.student_id || question.studentId,
+    studentName: question.student_name || question.studentName,
+    question: question.question_text || question.question,
+    answer: question.answer_text || question.answer,
+    createdAt: question.created_at || question.createdAt,
+    likes: question.likes || 0,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -179,7 +192,7 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Question saved to memory: ${questionId}`);
     }
 
-    return NextResponse.json(newQuestion, { status: 201 });
+    return NextResponse.json(transformQuestion(newQuestion), { status: 201 });
   } catch (error) {
     console.error('Error posting question:', error);
     return NextResponse.json(

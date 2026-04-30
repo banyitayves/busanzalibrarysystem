@@ -113,7 +113,7 @@ export default function QuestionSection() {
                 <div className="flex-1">
                   <p className="font-semibold text-gray-800">{q.studentName}</p>
                   <p className="text-sm text-gray-500">
-                    {new Date(q.createdAt).toLocaleDateString()}
+                    {q.createdAt ? new Date(q.createdAt).toLocaleDateString() : 'Just now'}
                   </p>
                 </div>
               </div>
