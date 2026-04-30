@@ -1,0 +1,55 @@
+
+> vvvvvvv@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.4 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 17.2s
+  Running TypeScript ...
+  Finished TypeScript in 20.8s ...
+  Collecting page data using 3 workers ...
+ΓÜá∩╕Å  MongoDB connection failed - using in-memory storage: Error: querySrv ECONNREFUSED _mongodb._tcp.cluster0.c2lni1r.mongodb.net
+ΓÜá∩╕Å  MongoDB connection failed - using in-memory storage: Error: querySrv ECONNREFUSED _mongodb._tcp.cluster0.c2lni1r.mongodb.net
+Γ£à Gemini AI initialized with valid API key
+  Generating static pages using 3 workers (0/26) ...
+Γ£à Gemini AI initialized with valid API key
+  Generating static pages using 3 workers (6/26) 
+  Generating static pages using 3 workers (12/26) 
+  Generating static pages using 3 workers (19/26) 
+Γ£ô Generating static pages using 3 workers (26/26) in 725ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ ╞Æ /api/auth/login
+Γö£ ╞Æ /api/auth/register
+Γö£ ╞Æ /api/books
+Γö£ ╞Æ /api/books/[id]
+Γö£ ╞Æ /api/books/search
+Γö£ ╞Æ /api/classmates
+Γö£ ╞Æ /api/courses
+Γö£ ╞Æ /api/courses/enroll
+Γö£ ╞Æ /api/discussions
+Γö£ ╞Æ /api/documents/upload
+Γö£ ╞Æ /api/import
+Γö£ ╞Æ /api/init
+Γö£ ╞Æ /api/messages
+Γö£ ╞Æ /api/questions
+Γö£ ╞Æ /api/recommendations
+Γö£ ╞Æ /api/reports
+Γö£ ╞Æ /api/samples
+Γö£ ╞Æ /api/seed
+Γö£ ╞Æ /api/summaries
+Γö£ ╞Æ /api/upload
+Γö£ ╞Æ /books/[id]
+Γö£ Γùï /dashboard
+Γö£ Γùï /login
+Γöö Γùï /register
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+
