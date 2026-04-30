@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import LibraryReportsSection from '@/app/components/features/LibraryReportsSection';
 import CSVImportSection from '@/app/components/features/CSVImportSection';
+import ClassesManagementSection from '@/app/components/features/ClassesManagementSection';
 
 export default function LibrarianDashboard() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ export default function LibrarianDashboard() {
       <div className="flex gap-4 flex-wrap border-b overflow-x-auto">
         {[
           { id: 'books', label: '📚 Manage Books', icon: 'books' },
+          { id: 'classes', label: '👥 Classes & Students', icon: 'classes' },
           { id: 'users', label: '👥 Users', icon: 'users' },
           { id: 'reports', label: '📊 Reports', icon: 'reports' },
           { id: 'import', label: '📤 Bulk Import', icon: 'import' },
@@ -72,6 +74,8 @@ export default function LibrarianDashboard() {
             <p className="text-gray-600 mt-4">Use the main library section to manage books</p>
           </div>
         )}
+
+        {activeTab === 'classes' && <ClassesManagementSection />}
 
         {activeTab === 'users' && (
           <div className="bg-white p-6 rounded-lg shadow">

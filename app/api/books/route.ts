@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { getDatabase } from '@/lib/mongodb';
 import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-processor';
-import { generateBookSummary } from '@/lib/openai-service';
+import { generateBookSummary } from '@/lib/gemini-service';
 import { addMockBook, getMockBooks } from '@/lib/mock-storage';
 import { v4 as uuidv4 } from 'uuid';
 

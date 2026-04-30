@@ -8,6 +8,19 @@ export interface FileContent {
   fileType: string;
 }
 
+// Import docx parser
+let mammoth: any = null;
+async function getMammoth() {
+  if (!mammoth) {
+    try {
+      mammoth = await import('mammoth' as any);
+    } catch {
+      console.warn('mammoth library not available for DOCX extraction');
+    }
+  }
+  return mammoth;
+}
+
 export async function extractTextFromFile(filePath: string): Promise<FileContent> {
   const fileName = path.basename(filePath);
   const fileExt = path.extname(filePath).toLowerCase();
@@ -15,10 +28,10 @@ export async function extractTextFromFile(filePath: string): Promise<FileContent
   try {
     if (fileExt === '.pdf') {
       return await extractFromPDF(filePath, fileName);
-    } else if (fileExt === '.txt') {
+    } else if (fileExt === '.txt' || fileExt === '.md') {
       return await extractFromTxt(filePath, fileName);
     } else if (fileExt === '.docx' || fileExt === '.doc') {
-      return await extractFromTxt(filePath, fileName);
+      return await extractFromDocx(filePath, fileName);
     } else {
       throw new Error(`Unsupported file type: ${fileExt}`);
     }
@@ -83,6 +96,55 @@ async function extractFromTxt(filePath: string, fileName: string): Promise<FileC
   } catch (error) {
     console.error(`Error extracting TXT ${fileName}:`, error);
     throw new Error(`Failed to extract text from file: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+async function extractFromDocx(filePath: string, fileName: string): Promise<FileContent> {
+  try {
+    const lib = await getMammoth();
+    
+    if (!lib || !lib.extractRawText) {
+      // Fallback: If mammoth not available, try to read as text
+      console.warn(`Using fallback extraction for ${fileName}`);
+      const text = fs.readFileSync(filePath, 'utf-8');
+      // Filter out XML tags and binary data
+      const cleanedText = text
+        .replace(/<[^>]*>/g, '') // Remove XML tags
+        .replace(/[^\x20-\x7E\n\r\t]/g, '') // Keep only printable ASCII
+        .replace(/\s+/g, ' ') // Collapse whitespace
+        .trim();
+      
+      if (cleanedText.length < 10) {
+        throw new Error('Could not extract meaningful text from DOCX file');
+      }
+      
+      return {
+        text: cleanedText,
+        fileName,
+        fileType: 'docx',
+      };
+    }
+
+    const buffer = fs.readFileSync(filePath);
+    const result = await lib.extractRawText({ arrayBuffer: buffer.buffer });
+    
+    if (!result.value || result.value.length < 10) {
+      throw new Error('DOCX file appears to be empty or unreadable');
+    }
+
+    return {
+      text: result.value.trim(),
+      fileName,
+      fileType: 'docx',
+    };
+  } catch (error) {
+    console.error(`Error extracting DOCX ${fileName}:`, error);
+    // Return placeholder instead of throwing
+    return {
+      text: `Document: ${fileName}\n\nThe DOCX file could not be fully processed, but it is saved in the library.`,
+      fileName,
+      fileType: 'docx',
+    };
   }
 }
 

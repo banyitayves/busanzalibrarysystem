@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
+import fs from 'fs';
+import { extractTextFromFile, cleanText } from '@/lib/file-processor';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Validate file type
     const allowedTypes = ['text/plain', 'application/pdf', 'text/markdown', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!allowedTypes.includes(file.type) && !file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
+    if (!allowedTypes.includes(file.type) && !file.name.endsWith('.txt') && !file.name.endsWith('.md') && !file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
       return NextResponse.json(
         { error: 'Invalid file type. Supported: TXT, PDF, MD, DOCX' },
         { status: 400 }
@@ -26,17 +30,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read file content
+    // Save file temporarily to extract text
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const fileName = `${uuidv4()}-${file.name}`;
+    const filePath = path.join(uploadsDir, fileName);
+
     const buffer = await file.arrayBuffer();
-    const text = Buffer.from(buffer).toString('utf-8');
+    fs.writeFileSync(filePath, Buffer.from(buffer));
+
+    // Extract text using proper text extraction
+    let fileContent;
+    try {
+      fileContent = await extractTextFromFile(filePath);
+    } catch (extractError) {
+      console.error(`Error extracting from ${fileName}:`, extractError);
+      // Return error response instead of fallback
+      return NextResponse.json(
+        { error: 'Failed to extract text from file. Please try a different file.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanedContent = cleanText(fileContent.text);
 
     // Return file content
     return NextResponse.json({
       success: true,
       fileName: file.name,
       fileSize: file.size,
-      content: text.substring(0, 10000), // Limit to 10k chars for AI processing
-      fullContent: text,
+      content: cleanedContent.substring(0, 10000), // Limit to 10k chars for AI processing
+      fullContent: cleanedContent,
     });
   } catch (error) {
     console.error('File upload error:', error);

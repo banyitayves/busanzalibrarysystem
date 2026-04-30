@@ -73,6 +73,27 @@ export async function POST(
     const db = await getDatabase();
 
     if (action === 'borrow') {
+      // Check if user already has a borrowed book (enforce 1 book limit)
+      if (db) {
+        try {
+          const borrowsCollection = db.collection('book_borrows');
+          const existingBorrow = await borrowsCollection.findOne({
+            student_id: studentId,
+            status: 'borrowed',
+          } as any);
+          
+          if (existingBorrow) {
+            return NextResponse.json(
+              { error: 'You can only borrow 1 book at a time. Please return your current book first.' },
+              { status: 400 }
+            );
+          }
+        } catch (err) {
+          console.warn('Failed to check existing borrows:', err);
+          // Continue anyway - better to let them borrow than block them
+        }
+      }
+
       // Borrow book - store in database
       const borrowId = `borrow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const dueDateValue = dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);

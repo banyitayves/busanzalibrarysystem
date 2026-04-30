@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface Book {
   id: string;
@@ -12,15 +13,28 @@ interface Book {
   created_at: string;
 }
 
+interface Question {
+  id: string;
+  question: string;
+  answer: string;
+  userName: string;
+  createdAt: string;
+}
+
 interface Props {
   params: Promise<{ id: string }> | { id: string };
 }
 
 export default function BookDetailView({ params }: Props) {
+  const { user } = useAuth();
   const [bookId, setBookId] = useState<string>('');
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [questionText, setQuestionText] = useState('');
+  const [askingQuestion, setAskingQuestion] = useState(false);
 
   useEffect(() => {
     // Handle both Promise and direct params
@@ -47,6 +61,11 @@ export default function BookDetailView({ params }: Props) {
         }
         const data = await response.json();
         setBook(data);
+        
+        // Load questions for this book
+        const questionsResponse = await fetch(`/api/questions?bookId=${bookId}`);
+        const questionsData = await questionsResponse.json();
+        setQuestions(Array.isArray(questionsData) ? questionsData : []);
       } catch (err) {
         setError(`Error loading book: ${String(err)}`);
       } finally {
@@ -56,6 +75,39 @@ export default function BookDetailView({ params }: Props) {
 
     fetchBook();
   }, [bookId]);
+
+  const handleAskQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!questionText.trim() || !user) return;
+
+    setAskingQuestion(true);
+    try {
+      const response = await fetch('/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId,
+          bookTitle: book?.title,
+          question: questionText,
+          userId: user.id,
+          userName: user.name,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit question');
+      }
+
+      const newQuestion = await response.json();
+      setQuestions([newQuestion, ...questions]);
+      setQuestionText('');
+      setShowQuestionForm(false);
+    } catch (err) {
+      alert('Failed to submit question: ' + String(err));
+    } finally {
+      setAskingQuestion(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -126,12 +178,55 @@ export default function BookDetailView({ params }: Props) {
               <button className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
                 📚 Borrow This Book
               </button>
-              <button className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+              <button 
+                onClick={() => setShowQuestionForm(!showQuestionForm)}
+                className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                 ❓ Ask Question About This Book
               </button>
             </div>
           </div>
         </div>
+
+        {/* Question Form */}
+        {showQuestionForm && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-bold mb-4">Ask a Question</h2>
+            <form onSubmit={handleAskQuestion} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Question
+                </label>
+                <textarea
+                  value={questionText}
+                  onChange={(e) => setQuestionText(e.target.value)}
+                  placeholder="Ask something about this book..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  disabled={askingQuestion}
+                />
+              </div>
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  disabled={askingQuestion || !questionText.trim()}
+                  className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {askingQuestion ? 'Generating Answer...' : 'Submit Question'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuestionForm(false);
+                    setQuestionText('');
+                  }}
+                  className="flex-1 bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -148,12 +243,35 @@ export default function BookDetailView({ params }: Props) {
             </p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
-            <p className="text-gray-600 mb-2">Characters</p>
+            <p className="text-gray-600 mb-2">Questions Asked</p>
             <p className="text-2xl font-bold text-blue-600">
-              {book.file_content?.length || 0}
+              {questions.length}
             </p>
           </div>
         </div>
+
+        {/* Questions Section */}
+        {questions.length > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-bold mb-6">Q&A About This Book</h2>
+            <div className="space-y-6">
+              {questions.map((q) => (
+                <div key={q.id} className="border-l-4 border-purple-600 pl-4 py-2">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-sm text-gray-500">{q.userName}</p>
+                    <p className="text-sm text-gray-400">
+                      {new Date(q.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <p className="font-semibold text-gray-800 mb-2">Q: {q.question}</p>
+                  <div className="bg-blue-50 p-3 rounded">
+                    <p className="text-gray-700">A: {q.answer}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
