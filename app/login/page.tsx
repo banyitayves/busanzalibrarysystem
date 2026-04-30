@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { login: contextLogin } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,22 +24,11 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `Login failed (${response.status}): ${data.details || ''}`);
-      }
-
-      // Store user info and redirect
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-      router.push('/dashboard');
+      await contextLogin(username, password);
+      // Wait a moment for state to update, then redirect
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 100);
     } catch (err) {
       console.error('Login error:', err);
       const message = err instanceof Error ? err.message : 'Login failed';
