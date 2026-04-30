@@ -39,6 +39,10 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = () => {
+    // Clear any existing session first
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    
     const guestUser = {
       id: 'guest-' + Date.now(),
       username: 'Guest User',
@@ -49,7 +53,9 @@ export default function LoginPage() {
     };
     localStorage.setItem('user', JSON.stringify(guestUser));
     localStorage.setItem('token', 'guest-token-' + Date.now());
-    router.push('/dashboard');
+    
+    // Force a hard navigation to ensure AuthContext reloads
+    window.location.href = '/dashboard';
   };
 
   return (
