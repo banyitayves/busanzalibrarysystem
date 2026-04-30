@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'librarian' | 'student' | 'teacher' | null;
+export type UserRole = 'librarian' | 'student' | 'teacher' | 'guest' | null;
 
 interface User {
   id: string | number;

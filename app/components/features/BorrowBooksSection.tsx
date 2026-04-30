@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface Book {
   id: string;
@@ -16,6 +17,8 @@ export default function BorrowBooksSection() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
 
   useEffect(() => {
     fetchBooks();
@@ -42,13 +45,18 @@ export default function BorrowBooksSection() {
   };
 
   const handleBorrow = async (bookId: string) => {
+    if (isGuest) {
+      setMessage('❌ Guest users cannot borrow books. Please create an account to borrow.');
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/books/${bookId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'borrow',
-          studentId: '1', // Replace with actual user ID
+          studentId: user?.id || '1', // Replace with actual user ID
           dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
         }),
       });
@@ -74,8 +82,14 @@ export default function BorrowBooksSection() {
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Borrow Books</h2>
 
+      {isGuest && (
+        <div className="p-3 rounded-md mb-4 bg-orange-100 text-orange-700 border border-orange-300">
+          ℹ️ You're in Guest Mode. You can read books but cannot borrow them. <a href="/register" className="font-semibold underline hover:no-underline">Create an account</a> to borrow books.
+        </div>
+      )}
+
       {message && (
-        <div className={`p-3 rounded-md mb-4 ${message.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+        <div className={`p-3 rounded-md mb-4 ${message.includes('Error') || message.includes('❌') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
           {message}
         </div>
       )}
@@ -102,7 +116,12 @@ export default function BorrowBooksSection() {
                 </button>
                 <button
                   onClick={() => handleBorrow(book.id)}
-                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm"
+                  disabled={isGuest}
+                  className={`flex-1 px-4 py-2 rounded-md transition-colors text-sm font-semibold ${
+                    isGuest
+                      ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
                 >
                   📚 Borrow
                 </button>

@@ -47,6 +47,20 @@ export default function LoginPage() {
     }
   };
 
+  const handleGuestLogin = () => {
+    const guestUser = {
+      id: 'guest-' + Date.now(),
+      username: 'Guest User',
+      name: 'Guest User',
+      role: 'guest',
+      class_name: null,
+      level: null,
+    };
+    localStorage.setItem('user', JSON.stringify(guestUser));
+    localStorage.setItem('token', 'guest-token-' + Date.now());
+    router.push('/dashboard');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
@@ -107,10 +121,19 @@ export default function LoginPage() {
           </p>
           <Link
             href="/register"
-            className="w-full block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-center text-sm"
+            className="w-full block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-center text-sm mb-3"
           >
             Create New Account
           </Link>
+          <p className="text-xs text-gray-500 mb-3">— OR —</p>
+          <button
+            type="button"
+            onClick={handleGuestLogin}
+            className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-semibold text-center text-sm"
+          >
+            👤 Continue as Guest
+          </button>
+          <p className="text-xs text-gray-500 mt-2">Guest: Access all features except borrowing books</p>
         </div>
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
