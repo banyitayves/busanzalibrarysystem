@@ -92,7 +92,8 @@ export default function BookUploadSection() {
           window.location.reload();
         }, 2000);
       } else {
-        setMessage(`❌ Upload failed: ${(data as any).message || 'Unknown error'}`);
+        const errorMsg = (data as any).error || (data as any).message || 'Unknown error';
+        setMessage(`❌ Upload failed: ${errorMsg}`);
       }
     } catch (error) {
       setMessage(`❌ Error uploading file: ${String(error)}`);
@@ -143,11 +144,14 @@ export default function BookUploadSection() {
           setUploadedFiles(updated);
           successCount++;
         } else {
+          const errorData = await response.json();
+          const errorMsg = errorData.error || errorData.message || 'Upload failed';
           const updated = [...uploadedFiles];
           updated[i].status = 'error';
-          updated[i].error = 'Upload failed';
+          updated[i].error = errorMsg;
           setUploadedFiles(updated);
           errorCount++;
+          console.error(`File ${i} error:`, errorMsg);
         }
       } catch (error) {
         const updated = [...uploadedFiles];
