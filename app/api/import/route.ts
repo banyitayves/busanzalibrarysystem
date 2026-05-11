@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDatabase } from '@/lib/mongodb';
 
 interface ImportResult {
   success: boolean;
@@ -7,6 +8,9 @@ interface ImportResult {
   errors: string[];
   warnings: string[];
 }
+
+// In-memory storage for imported books
+let importedBooks: any[] = [];
 
 export async function POST(request: Request) {
   try {
@@ -65,9 +69,15 @@ export async function POST(request: Request) {
         );
       }
 
+      // Get database connection (will be null if MongoDB not available)
+      const db = await getDatabase();
+      
       // Process book records
+      const booksToImport = [];
+      
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map((v) => v.trim());
+        // Handle quoted values in CSV
+        const values = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
 
         if (values.filter((v) => v).length === 0) continue; // Skip empty rows
 
@@ -91,7 +101,42 @@ export async function POST(request: Request) {
           continue;
         }
 
-        result.importedCount++;
+        const bookData = {
+          title,
+          author,
+          isbn,
+          category,
+          quantity: Number(quantity),
+          created_at: new Date(),
+          updated_at: new Date(),
+        };
+
+        booksToImport.push(bookData);
+      }
+
+      // Insert books into database or in-memory storage
+      if (booksToImport.length > 0) {
+        if (db) {
+          // Use MongoDB if available
+          try {
+            const booksCollection = db.collection('book_catalog');
+            await booksCollection.insertMany(booksToImport as any[]);
+            result.importedCount = booksToImport.length;
+            console.log(`✓ Imported ${booksToImport.length} books to MongoDB`);
+          } catch (err) {
+            console.error('MongoDB insert error:', err);
+            // Fallback to in-memory
+            importedBooks.push(...booksToImport);
+            result.importedCount = booksToImport.length;
+            result.warnings.push('Stored in memory (MongoDB unavailable)');
+          }
+        } else {
+          // Store in memory when MongoDB is not available
+          importedBooks.push(...booksToImport);
+          result.importedCount = booksToImport.length;
+          result.warnings.push('Stored in memory (MongoDB connection unavailable)');
+          console.log(`✓ Imported ${booksToImport.length} books to memory`);
+        }
       }
     } else if (importType === 'members') {
       const requiredHeaders = ['name', 'role', 'joindate'];
@@ -142,13 +187,49 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      success: true,
+      success: result.failedCount === 0,
       result,
       message: `Import completed: ${result.importedCount} records imported, ${result.failedCount} failed`,
     });
   } catch (error) {
+    console.error('Import error:', error);
     return NextResponse.json(
-      { error: 'Failed to process CSV file' },
+      { error: 'Failed to process CSV file', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+// GET endpoint to retrieve imported books
+export async function GET() {
+  try {
+    const db = await getDatabase();
+    
+    if (db) {
+      // Try to get from MongoDB
+      try {
+        const booksCollection = db.collection('book_catalog');
+        const books = await booksCollection.find({}).toArray();
+        return NextResponse.json({
+          source: 'mongodb',
+          count: books.length,
+          books,
+        });
+      } catch (err) {
+        console.error('MongoDB read error:', err);
+      }
+    }
+    
+    // Return in-memory books
+    return NextResponse.json({
+      source: 'memory',
+      count: importedBooks.length,
+      books: importedBooks,
+    });
+  } catch (error) {
+    console.error('Error retrieving books:', error);
+    return NextResponse.json(
+      { error: 'Failed to retrieve books' },
       { status: 500 }
     );
   }

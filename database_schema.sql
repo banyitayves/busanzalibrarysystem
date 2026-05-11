@@ -7,16 +7,22 @@ CREATE TABLE IF NOT EXISTS books (
   title VARCHAR(255) NOT NULL,
   author VARCHAR(255),
   description TEXT,
-  file_path VARCHAR(255) NOT NULL,
+  isbn VARCHAR(20),
+  category VARCHAR(100),
+  quantity INT DEFAULT 0,
+  file_path VARCHAR(255),
   file_type VARCHAR(50),
   file_content LONGTEXT,
   upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   uploaded_by INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX (created_at),
   INDEX (title),
-  INDEX (author)
+  INDEX (author),
+  INDEX (isbn),
+  INDEX (category)
 );
 
 -- Create Book Borrowing Table

@@ -133,16 +133,26 @@ export async function GET(request: NextRequest) {
       const booksCollection = db.collection('books');
       books = await booksCollection
         .find({})
-        .project({ id: 1, title: 1, author: 1, description: 1, file_type: 1, created_at: 1 })
+        .project({ book_id: 1, title: 1, author: 1, description: 1, file_type: 1, created_at: 1 })
         .sort({ created_at: -1 })
         .limit(100)
         .toArray();
+      
+      // Map book_id to id for API response
+      books = books.map(b => ({
+        id: b.book_id || b._id,
+        title: b.title,
+        author: b.author,
+        description: b.description,
+        file_type: b.file_type,
+        created_at: b.created_at,
+      }));
     } else {
       // Fallback to in-memory storage
       const mockBooks = getMockBooks();
       books = mockBooks
         .map(b => ({
-          id: b._id,
+          id: b.book_id || b._id,
           title: b.title,
           author: b.author,
           description: b.description,

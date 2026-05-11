@@ -1,0 +1,49 @@
+title,author,isbn,category,quantity
+"English Primary","GS Busanza School Library","CBC-00001","PRIMARY - English",26
+"Mathematics Primary","GS Busanza School Library","CBC-00002","PRIMARY - Mathematics",24
+"Social and Religious Studies Primary","GS Busanza School Library","CBC-00003","PRIMARY - Social Studies",21
+"Creative Arts Primary","GS Busanza School Library","CBC-00004","PRIMARY - Creative Arts",10
+"Physical Education and Sports Primary","GS Busanza School Library","CBC-00005","PRIMARY - PES",28
+"Ikinyarwanda Primary","GS Busanza School Library","CBC-00006","PRIMARY - Ikinyarwanda",5
+"French Primary","GS Busanza School Library","CBC-00007","PRIMARY - French",9
+"Kinyarwanda Textbook","GS Busanza School Library","CBC-00008","SECONDARY",54
+"Mathematics Textbook","GS Busanza School Library","CBC-00009","SECONDARY",40
+"English Textbook","GS Busanza School Library","CBC-00010","SECONDARY",39
+"Geography Textbook","GS Busanza School Library","CBC-00011","SECONDARY",64
+"History Textbook","GS Busanza School Library","CBC-00012","SECONDARY",69
+"Chemistry Textbook","GS Busanza School Library","CBC-00013","SECONDARY",19
+"Physics Textbook","GS Busanza School Library","CBC-00014","SECONDARY",19
+"Biology Textbook","GS Busanza School Library","CBC-00015","SECONDARY",19
+"GSCS Textbook","GS Busanza School Library","CBC-00016","SECONDARY",31
+"French Textbook","GS Busanza School Library","CBC-00017","SECONDARY",149
+"Kiswahili Textbook","GS Busanza School Library","CBC-00018","SECONDARY",70
+"Literature in English Textbook","GS Busanza School Library","CBC-00019","SECONDARY",69
+"ICT Textbook","GS Busanza School Library","CBC-00020","SECONDARY",111
+"Entrepreneurship Textbook","GS Busanza School Library","CBC-00021","SECONDARY",59
+"Subsidiary Mathematics Textbook","GS Busanza School Library","CBC-00022","SECONDARY",34
+"Kiswahili Elective Textbook","GS Busanza School Library","CBC-00023","SECONDARY",39
+"Dictionaries","GS Busanza School Library","CBC-00024","REFERENCE",6
+"Economics Textbook","GS Busanza School Library","CBC-00025","SECONDARY",17
+"Computer Science Textbook","GS Busanza School Library","CBC-00026","SECONDARY",82
+"Kinyarwanda Elective Textbook","GS Busanza School Library","CBC-00027","SECONDARY",41
+"Kinyarwanda Teacher Guide","GS Busanza School Library","CBC-00028","TEACHER RESOURCES",4
+"Mathematics Teacher Guide","GS Busanza School Library","CBC-00029","TEACHER RESOURCES",9
+"English Teacher Guide","GS Busanza School Library","CBC-00030","TEACHER RESOURCES",3
+"Geography Teacher Guide","GS Busanza School Library","CBC-00031","TEACHER RESOURCES",4
+"History Teacher Guide","GS Busanza School Library","CBC-00032","TEACHER RESOURCES",4
+"Chemistry Teacher Guide","GS Busanza School Library","CBC-00033","TEACHER RESOURCES",5
+"Physics Teacher Guide","GS Busanza School Library","CBC-00034","TEACHER RESOURCES",4
+"Biology Teacher Guide","GS Busanza School Library","CBC-00035","TEACHER RESOURCES",4
+"French Teacher Guide","GS Busanza School Library","CBC-00036","TEACHER RESOURCES",3
+"Kiswahili Teacher Guide","GS Busanza School Library","CBC-00037","TEACHER RESOURCES",3
+"Literature in English Teacher Guide","GS Busanza School Library","CBC-00038","TEACHER RESOURCES",3
+"PES Teacher Guide","GS Busanza School Library","CBC-00039","TEACHER RESOURCES",7
+"Religion Teacher Guide","GS Busanza School Library","CBC-00040","TEACHER RESOURCES",3
+"ICT Teacher Guide","GS Busanza School Library","CBC-00041","TEACHER RESOURCES",2
+"Entrepreneurship Teacher Guide","GS Busanza School Library","CBC-00042","TEACHER RESOURCES",1
+"Other CBC Books Collection","GS Busanza School Library","CBC-00043","LIBRARY COLLECTION",5230
+"English P1 Pupils Book","GS Busanza School Library","CBC-00044","REVISED CURRICULUM",26
+"English P2 Pupils Book","GS Busanza School Library","CBC-00045","REVISED CURRICULUM",301
+"English P2 Teachers Guide","GS Busanza School Library","CBC-00046","REVISED CURRICULUM",1
+"English P3 Pupils Book","GS Busanza School Library","CBC-00047","REVISED CURRICULUM",139
+"English P3 Teachers Guide","GS Busanza School Library","CBC-00048","REVISED CURRICULUM",1
