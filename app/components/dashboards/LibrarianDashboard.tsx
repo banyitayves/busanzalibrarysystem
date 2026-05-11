@@ -5,6 +5,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import LibraryReportsSection from '@/app/components/features/LibraryReportsSection';
 import CSVImportSection from '@/app/components/features/CSVImportSection';
 import ClassesManagementSection from '@/app/components/features/ClassesManagementSection';
+import BookUploadSection from '@/app/components/features/BookUploadSection';
 
 export default function LibrarianDashboard() {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ export default function LibrarianDashboard() {
       <div className="flex gap-4 flex-wrap border-b overflow-x-auto">
         {[
           { id: 'books', label: '📚 Manage Books', icon: 'books' },
+          { id: 'upload', label: '⬆️ Upload Books & Papers', icon: 'upload' },
           { id: 'classes', label: '👥 Classes & Students', icon: 'classes' },
           { id: 'users', label: '👥 Users', icon: 'users' },
           { id: 'reports', label: '📊 Reports', icon: 'reports' },
@@ -71,9 +73,11 @@ export default function LibrarianDashboard() {
             <button className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
               Add New Book
             </button>
-            <p className="text-gray-600 mt-4">Use the main library section to manage books</p>
+            <p className="text-gray-600 mt-4">Use the upload section to add new books and past papers</p>
           </div>
         )}
+
+        {activeTab === 'upload' && <BookUploadSection />}
 
         {activeTab === 'classes' && <ClassesManagementSection />}
 
