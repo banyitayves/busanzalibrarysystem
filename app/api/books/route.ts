@@ -31,31 +31,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only PDF and TXT files are supported' }, { status: 400 });
     }
 
-    // Save file to public/uploads
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const fileName = `${uuidv4()}-${file.name}`;
-    const filePath = path.join(uploadsDir, fileName);
-
-    const buffer = await file.arrayBuffer();
-    fs.writeFileSync(filePath, Buffer.from(buffer));
-
-    console.log(`📄 Processing file: ${fileName} (${file.size} bytes)`);
-
-    // Extract text from file
     let fileContent;
+    let fileSaved = false;
+    const fileName = `${uuidv4()}-${file.name}`;
+    let fileUrl = `/uploads/${fileName}`;
+
+    // Try to save file to disk (will work locally, may fail on Vercel)
     try {
-      fileContent = await extractTextFromFile(filePath);
-    } catch (extractError) {
-      console.error(`Error extracting from ${fileName}:`, extractError);
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const filePath = path.join(uploadsDir, fileName);
+      const buffer = await file.arrayBuffer();
+      fs.writeFileSync(filePath, Buffer.from(buffer));
+      fileSaved = true;
+      console.log(`📄 File saved to disk: ${fileName} (${file.size} bytes)`);
+
+      // Extract text from saved file
+      try {
+        fileContent = await extractTextFromFile(filePath);
+      } catch (extractError) {
+        console.error(`Error extracting from ${fileName}:`, extractError);
+        fileContent = {
+          text: `Document: ${fileName}`,
+          fileName,
+          fileType: file.type.includes('pdf') ? 'pdf' : 'txt',
+        };
+      }
+    } catch (diskError) {
+      // Fall back to in-memory extraction if file system write fails (Vercel environment)
+      console.warn(`⚠️ Could not save file to disk (likely on Vercel), using in-memory storage:`, diskError);
+      
+      const buffer = await file.arrayBuffer();
+      const bufferData = Buffer.from(buffer);
+      
+      // For in-memory storage, just store basic file content
       fileContent = {
-        text: `Document: ${fileName}`,
+        text: file.type === 'application/pdf' 
+          ? `PDF Document: ${fileName} (${file.size} bytes)` 
+          : bufferData.toString('utf-8').substring(0, 100000), // Limit to 100k chars
         fileName,
         fileType: file.type.includes('pdf') ? 'pdf' : 'txt',
       };
+      
+      fileUrl = `/memory/${fileName}`; // Mark as in-memory file
+      console.log(`📄 File stored in memory: ${fileName} (${file.size} bytes)`);
     }
 
     const cleanedContent = cleanText(fileContent.text);
@@ -68,7 +90,7 @@ export async function POST(request: NextRequest) {
       title,
       author: author || 'Unknown',
       description: description || 'No description provided',
-      file_path: `/uploads/${fileName}`,
+      file_path: fileUrl,
       file_type: fileContent.fileType,
       file_content: cleanedContent,
       uploaded_by: userId || null,
