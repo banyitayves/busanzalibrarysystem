@@ -6,6 +6,8 @@ import LibraryReportsSection from '@/app/components/features/LibraryReportsSecti
 import CSVImportSection from '@/app/components/features/CSVImportSection';
 import ClassesManagementSection from '@/app/components/features/ClassesManagementSection';
 import BookUploadSection from '@/app/components/features/BookUploadSection';
+import StudentBorrowingManagementSection from '@/app/components/features/StudentBorrowingManagementSection';
+import OfferBooksSection from '@/app/components/features/OfferBooksSection';
 
 export default function LibrarianDashboard() {
   const { user } = useAuth();
@@ -27,9 +29,11 @@ export default function LibrarianDashboard() {
         {[
           { id: 'books', label: '📚 Manage Books', icon: 'books' },
           { id: 'upload', label: '⬆️ Upload Books & Papers', icon: 'upload' },
+          { id: 'borrowing', label: '📊 Student Borrowing', icon: 'borrowing' },
+          { id: 'offer', label: '📬 Offer Books', icon: 'offer' },
           { id: 'classes', label: '👥 Classes & Students', icon: 'classes' },
           { id: 'users', label: '👥 Users', icon: 'users' },
-          { id: 'reports', label: '📊 Reports', icon: 'reports' },
+          { id: 'reports', label: '📋 Reports', icon: 'reports' },
           { id: 'import', label: '📤 Bulk Import', icon: 'import' },
           { id: 'analytics', label: '📈 Analytics', icon: 'analytics' },
         ].map((tab) => (
@@ -103,6 +107,10 @@ export default function LibrarianDashboard() {
         )}
 
         {activeTab === 'reports' && <LibraryReportsSection />}
+
+        {activeTab === 'borrowing' && <StudentBorrowingManagementSection />}
+
+        {activeTab === 'offer' && <OfferBooksSection />}
 
         {activeTab === 'import' && <CSVImportSection />}
 
