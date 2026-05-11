@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
     const bookId = uuidv4();
     const newBook = {
+      _id: bookId,
       book_id: bookId,
       title,
       author: author || 'Unknown',

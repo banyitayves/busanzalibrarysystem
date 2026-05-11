@@ -2,6 +2,7 @@
 
 export interface MockBook {
   _id: string;
+  book_id?: string;
   title: string;
   author: string;
   description: string;
