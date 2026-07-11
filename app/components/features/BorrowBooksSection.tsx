@@ -10,6 +10,8 @@ interface Book {
   description: string;
   file_type: string;
   created_at: string;
+  copies_available?: number;
+  copies_total?: number;
 }
 
 interface BorrowBooksSectionProps {
@@ -30,7 +32,7 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
 
   const fetchBooks = async () => {
     try {
-      const response = await fetch('/api/books');
+      const response = await fetch('/api/books?type=borrowable');
       const data = await response.json();
       
       if (!response.ok || !Array.isArray(data)) {
@@ -110,7 +112,7 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
               <p className="text-sm text-gray-600 mb-2">by {book.author || 'Unknown'}</p>
               <p className="text-sm text-gray-700 mb-3 line-clamp-2">{book.description}</p>
               <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                <span>{book.file_type.toUpperCase()}</span>
+                <span>Copies available: {book.copies_available ?? 1}</span>
                 <span>{new Date(book.created_at).toLocaleDateString()}</span>
               </div>
               <div className="flex gap-2">

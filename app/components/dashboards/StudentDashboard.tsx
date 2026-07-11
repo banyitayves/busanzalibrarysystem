@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import BorrowBooksSection from '@/app/components/features/BorrowBooksSection';
+import ReadBooksSection from '@/app/components/features/ReadBooksSection';
 
-type StudentTab = 'catalog' | 'loans' | 'policy';
+type StudentTab = 'borrowable' | 'readable' | 'loans' | 'policy';
 
 interface LoanRecord {
   id: string;
@@ -15,7 +16,7 @@ interface LoanRecord {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<StudentTab>('catalog');
+  const [activeTab, setActiveTab] = useState<StudentTab>('borrowable');
   const [loans, setLoans] = useState<LoanRecord[]>([]);
 
   useEffect(() => {
@@ -60,7 +61,8 @@ export default function StudentDashboard() {
 
       <div className="flex gap-4 flex-wrap border-b overflow-x-auto">
         {[
-          { id: 'catalog', label: '📖 Browse & Borrow' },
+          { id: 'borrowable', label: '📖 Borrowable Books' },
+          { id: 'readable', label: '📚 Read Books' },
           { id: 'loans', label: '📚 My Loans' },
           { id: 'policy', label: '📋 Library Rules' },
         ].map((tab) => (
@@ -78,7 +80,9 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      {activeTab === 'catalog' && <BorrowBooksSection onBorrowSuccess={handleBorrowSuccess} />}
+      {activeTab === 'borrowable' && <BorrowBooksSection onBorrowSuccess={handleBorrowSuccess} />}
+
+      {activeTab === 'readable' && <ReadBooksSection />}
 
       {activeTab === 'loans' && (
         <div className="bg-white p-6 rounded-lg shadow">

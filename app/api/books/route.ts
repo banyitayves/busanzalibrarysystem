@@ -10,14 +10,53 @@ import { v4 as uuidv4 } from 'uuid';
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file') as File | null;
     const title = formData.get('title') as string;
     const author = formData.get('author') as string;
     const description = formData.get('description') as string;
     const userId = formData.get('userId') as string;
+    const kind = (formData.get('kind') as string | null)?.toLowerCase() || (file ? 'readable' : 'borrowable');
+    const copiesTotal = Number(formData.get('copies_total') || formData.get('quantity') || 1);
 
-    if (!file || !title) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    }
+
+    const db = await getDatabase();
+    const bookId = uuidv4();
+
+    if (kind === 'borrowable') {
+      const newBook = {
+        _id: bookId,
+        book_id: bookId,
+        title,
+        author: author || 'Unknown',
+        description: description || 'Library inventory item',
+        kind: 'borrowable',
+        file_type: 'inventory',
+        file_content: '',
+        file_path: '',
+        copies_total: Number.isFinite(copiesTotal) && copiesTotal > 0 ? copiesTotal : 1,
+        copies_available: Number.isFinite(copiesTotal) && copiesTotal > 0 ? copiesTotal : 1,
+        uploaded_by: userId || null,
+        created_at: new Date(),
+      };
+
+      if (db) {
+        const booksCollection = db.collection('books');
+        await booksCollection.insertOne(newBook as any);
+      } else {
+        addMockBook(newBook as any);
+      }
+
+      return NextResponse.json(
+        { id: bookId, message: '✅ Library inventory item added successfully.', title },
+        { status: 201 }
+      );
+    }
+
+    if (!file) {
+      return NextResponse.json({ error: 'Readable content requires a PDF or TXT file' }, { status: 400 });
     }
 
     // Check file size (max 100MB)
@@ -82,14 +121,13 @@ export async function POST(request: NextRequest) {
 
     const cleanedContent = cleanText(fileContent.text);
 
-    const db = await getDatabase();
-    const bookId = uuidv4();
     const newBook = {
       _id: bookId,
       book_id: bookId,
       title,
       author: author || 'Unknown',
-      description: description || 'No description provided',
+      description: description || 'Readable content available for students',
+      kind: 'readable',
       file_path: fileUrl,
       file_type: fileContent.fileType,
       file_content: cleanedContent,
@@ -149,38 +187,56 @@ async function generateSummaryAsync(content: string, title: string, bookId: stri
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type')?.toLowerCase();
     const db = await getDatabase();
     let books: any[] = [];
 
+    const filter = type === 'borrowable'
+      ? { kind: 'borrowable' }
+      : type === 'readable'
+        ? { kind: 'readable' }
+        : {};
+
     if (db) {
-      // Try MongoDB
       const booksCollection = db.collection('books');
       books = await booksCollection
-        .find({})
-        .project({ book_id: 1, title: 1, author: 1, description: 1, file_type: 1, created_at: 1 })
+        .find(filter)
+        .project({ book_id: 1, title: 1, author: 1, description: 1, file_type: 1, kind: 1, copies_total: 1, copies_available: 1, file_content: 1, created_at: 1 })
         .sort({ created_at: -1 })
         .limit(100)
         .toArray();
       
-      // Map book_id to id for API response
       books = books.map(b => ({
         id: b.book_id || b._id,
         title: b.title,
         author: b.author,
         description: b.description,
         file_type: b.file_type,
+        kind: b.kind || (b.file_content ? 'readable' : 'borrowable'),
+        copies_total: b.copies_total || 1,
+        copies_available: b.copies_available ?? b.copies_total ?? 1,
+        has_readable_content: Boolean(b.file_content),
         created_at: b.created_at,
       }));
     } else {
-      // Fallback to in-memory storage
       const mockBooks = getMockBooks();
       books = mockBooks
-        .map(b => ({
+        .filter((b: any) => {
+          if (type === 'borrowable') return b.kind === 'borrowable';
+          if (type === 'readable') return b.kind === 'readable' || Boolean(b.file_content);
+          return true;
+        })
+        .map((b: any) => ({
           id: b.book_id || b._id,
           title: b.title,
           author: b.author,
           description: b.description,
           file_type: b.file_type,
+          kind: b.kind || (b.file_content ? 'readable' : 'borrowable'),
+          copies_total: b.copies_total || 1,
+          copies_available: b.copies_available ?? b.copies_total ?? 1,
+          has_readable_content: Boolean(b.file_content),
           created_at: b.created_at,
         }))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

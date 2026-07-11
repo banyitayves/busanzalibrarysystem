@@ -27,6 +27,8 @@ export default function BookUploadSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [batchMode, setBatchMode] = useState(false);
+  const [itemKind, setItemKind] = useState<'borrowable' | 'readable'>('borrowable');
+  const [copiesTotal, setCopiesTotal] = useState('1');
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -60,8 +62,50 @@ export default function BookUploadSection() {
   const handleSingleUpload = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!files.length || !title) {
-      setMessage('❌ Please select a file and enter a title');
+    if (!title) {
+      setMessage('❌ Please enter a title');
+      return;
+    }
+
+    if (itemKind === 'borrowable') {
+      setIsLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('author', author);
+        formData.append('description', description || 'Library inventory item');
+        formData.append('userId', 'current-user');
+        formData.append('kind', 'borrowable');
+        formData.append('copies_total', copiesTotal);
+
+        const response = await fetch('/api/books', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data: UploadResponse = await response.json();
+
+        if (response.ok) {
+          setMessage(`✅ ${data.message}`);
+          setTitle('');
+          setAuthor('');
+          setDescription('');
+          setCopiesTotal('1');
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          const errorMsg = (data as any).error || (data as any).message || 'Unknown error';
+          setMessage(`❌ Upload failed: ${errorMsg}`);
+        }
+      } catch (error) {
+        setMessage(`❌ Error adding inventory item: ${String(error)}`);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    if (!files.length) {
+      setMessage('❌ Please select a file for readable content');
       return;
     }
 
@@ -73,6 +117,7 @@ export default function BookUploadSection() {
       formData.append('author', author);
       formData.append('description', description || `${isType === 'textbook' ? 'Textbook' : isType === 'past-paper' ? 'Past Paper' : 'Novel'}: ${title}`);
       formData.append('userId', 'current-user');
+      formData.append('kind', 'readable');
       formData.append('type', isType);
 
       const response = await fetch('/api/books', {
@@ -216,30 +261,72 @@ export default function BookUploadSection() {
       {/* Single Upload Form */}
       {!batchMode && (
         <form onSubmit={handleSingleUpload} className="space-y-4 mb-8 border-b pb-8">
-          {/* Material Type Selection */}
           <div>
-            <label className="block text-sm font-semibold mb-3">Material Type</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {(['textbook', 'past-paper', 'novel', 'reference'] as const).map((type) => (
-                <label key={type} className="flex items-center cursor-pointer p-2 border rounded hover:bg-blue-50">
-                  <input
-                    type="radio"
-                    name="type"
-                    value={type}
-                    checked={isType === type}
-                    onChange={(e) => setIsType(e.target.value as any)}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">
-                    {type === 'textbook' && '📖 Textbook'}
-                    {type === 'past-paper' && '📝 Past Paper'}
-                    {type === 'novel' && '📚 Novel'}
-                    {type === 'reference' && '📕 Reference'}
-                  </span>
-                </label>
-              ))}
+            <label className="block text-sm font-semibold mb-3">Item Type</label>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center cursor-pointer p-2 border rounded hover:bg-blue-50">
+                <input
+                  type="radio"
+                  name="itemKind"
+                  value="borrowable"
+                  checked={itemKind === 'borrowable'}
+                  onChange={() => setItemKind('borrowable')}
+                  className="mr-2"
+                />
+                <span>📚 Borrowable Inventory</span>
+              </label>
+              <label className="flex items-center cursor-pointer p-2 border rounded hover:bg-blue-50">
+                <input
+                  type="radio"
+                  name="itemKind"
+                  value="readable"
+                  checked={itemKind === 'readable'}
+                  onChange={() => setItemKind('readable')}
+                  className="mr-2"
+                />
+                <span>📖 Readable Material</span>
+              </label>
             </div>
           </div>
+
+          {itemKind === 'borrowable' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2">Copies Available</label>
+              <input
+                type="number"
+                min="1"
+                value={copiesTotal}
+                onChange={(e) => setCopiesTotal(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
+          )}
+
+          {itemKind === 'readable' && (
+            <div>
+              <label className="block text-sm font-semibold mb-3">Material Type</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {(['textbook', 'past-paper', 'novel', 'reference'] as const).map((type) => (
+                  <label key={type} className="flex items-center cursor-pointer p-2 border rounded hover:bg-blue-50">
+                    <input
+                      type="radio"
+                      name="type"
+                      value={type}
+                      checked={isType === type}
+                      onChange={(e) => setIsType(e.target.value as any)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">
+                      {type === 'textbook' && '📖 Textbook'}
+                      {type === 'past-paper' && '📝 Past Paper'}
+                      {type === 'novel' && '📚 Novel'}
+                      {type === 'reference' && '📕 Reference'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -279,24 +366,26 @@ export default function BookUploadSection() {
           </div>
 
           {/* File Upload */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">Upload File (PDF or TXT) *</label>
-            <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-600 transition">
-              <input
-                type="file"
-                accept=".pdf,.txt"
-                onChange={handleFileChange}
-                className="hidden"
-                id="single-file-input"
-                required
-              />
-              <label htmlFor="single-file-input" className="cursor-pointer">
-                <p className="text-lg">📁 Click to select file or drag & drop</p>
-                <p className="text-sm text-gray-500">PDF, TXT (Max 100MB)</p>
-                {files.length > 0 && <p className="text-sm text-green-600 mt-2">✓ {files[0].name}</p>}
-              </label>
+          {itemKind === 'readable' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2">Upload File (PDF or TXT) *</label>
+              <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-600 transition">
+                <input
+                  type="file"
+                  accept=".pdf,.txt"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="single-file-input"
+                  required
+                />
+                <label htmlFor="single-file-input" className="cursor-pointer">
+                  <p className="text-lg">📁 Click to select file or drag & drop</p>
+                  <p className="text-sm text-gray-500">PDF, TXT (Max 100MB)</p>
+                  {files.length > 0 && <p className="text-sm text-green-600 mt-2">✓ {files[0].name}</p>}
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Submit */}
           <button
@@ -304,7 +393,7 @@ export default function BookUploadSection() {
             disabled={isLoading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:bg-gray-400 transition"
           >
-            {isLoading ? '⏳ Uploading...' : '📤 Upload Book'}
+            {isLoading ? '⏳ Processing...' : itemKind === 'borrowable' ? '📚 Add Borrowable Item' : '📤 Upload Readable Material'}
           </button>
         </form>
       )}

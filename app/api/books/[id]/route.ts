@@ -73,10 +73,10 @@ export async function POST(
     const db = await getDatabase();
 
     if (action === 'borrow') {
-      // Check if user already has a borrowed book (enforce 1 book limit)
       if (db) {
         try {
           const borrowsCollection = db.collection('book_borrows');
+          const booksCollection = db.collection('books');
           const existingBorrow = await borrowsCollection.findOne({
             student_id: studentId,
             status: 'borrowed',
@@ -88,13 +88,23 @@ export async function POST(
               { status: 400 }
             );
           }
+
+          const bookRecord = await booksCollection.findOne({ $or: [{ _id: id }, { book_id: id }] } as any);
+          if (bookRecord?.kind === 'borrowable') {
+            const availableCopies = Number(bookRecord.copies_available ?? bookRecord.copies_total ?? 0);
+            if (availableCopies <= 0) {
+              return NextResponse.json({ error: 'This title is currently out of copies.' }, { status: 400 });
+            }
+            await booksCollection.updateOne(
+              { $or: [{ _id: id }, { book_id: id }] } as any,
+              { $set: { copies_available: availableCopies - 1 } }
+            );
+          }
         } catch (err) {
-          console.warn('Failed to check existing borrows:', err);
-          // Continue anyway - better to let them borrow than block them
+          console.warn('Failed to update borrow inventory:', err);
         }
       }
 
-      // Borrow book - store in database
       const borrowId = `borrow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const dueDateValue = dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
