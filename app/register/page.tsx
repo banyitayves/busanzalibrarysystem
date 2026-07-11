@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher'>('student');
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'librarian'>('student');
   const [selectedLevel, setSelectedLevel] = useState<keyof typeof CLASS_OPTIONS>('S1');
   const [selectedClass, setSelectedClass] = useState('S1A');
   const [isLoading, setIsLoading] = useState(false);
@@ -166,11 +166,11 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-gray-700 mb-3">
               I am a:
             </label>
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedRole('student')}
-                className={`flex-1 p-3 rounded-lg border-2 transition font-semibold text-sm ${
+                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
                   selectedRole === 'student'
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
                     : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
@@ -181,13 +181,24 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setSelectedRole('teacher')}
-                className={`flex-1 p-3 rounded-lg border-2 transition font-semibold text-sm ${
+                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
                   selectedRole === 'teacher'
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
                     : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
                 }`}
               >
                 👨‍🏫 Teacher
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('librarian')}
+                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
+                  selectedRole === 'librarian'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
+                }`}
+              >
+                📚 Librarian
               </button>
             </div>
           </div>

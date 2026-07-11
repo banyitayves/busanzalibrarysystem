@@ -12,7 +12,11 @@ interface Book {
   created_at: string;
 }
 
-export default function BorrowBooksSection() {
+interface BorrowBooksSectionProps {
+  onBorrowSuccess?: (bookTitle: string) => void;
+}
+
+export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSectionProps) {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -64,7 +68,9 @@ export default function BorrowBooksSection() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage(`Successfully borrowed "${books.find((b) => b.id === bookId)?.title}"`);
+        const borrowedTitle = books.find((b) => b.id === bookId)?.title || 'the selected book';
+        setMessage(`Successfully borrowed "${borrowedTitle}"`);
+        onBorrowSuccess?.(borrowedTitle);
         setSelectedBookId(null);
       } else {
         setMessage(`Error: ${data.error}`);
