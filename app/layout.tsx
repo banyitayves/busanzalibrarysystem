@@ -15,8 +15,8 @@ import { AuthProvider } from "./context/AuthContext";
 // });
 
 export const metadata: Metadata = {
-  title: "Smart Library & Learning Platform",
-  description: "AI-powered library with peer learning and online courses",
+  title: "Library Management System",
+  description: "A streamlined library management system for cataloguing, borrowing, and administration",
 };
 
 export default function RootLayout({

@@ -120,9 +120,9 @@ export default function LibrarianDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h4 className="font-semibold mb-2">Monthly Activity</h4>
-                <p className="text-gray-600 text-sm">Questions Asked: 324</p>
-                <p className="text-gray-600 text-sm">Summaries Generated: 156</p>
-                <p className="text-gray-600 text-sm">Course Enrollments: 89</p>
+                <p className="text-gray-600 text-sm">Borrow Requests: 324</p>
+                <p className="text-gray-600 text-sm">Returns Processed: 156</p>
+                <p className="text-gray-600 text-sm">New Library Registrations: 89</p>
               </div>
               <div>
                 <h4 className="font-semibold mb-2">System Health</h4>

@@ -62,10 +62,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-          📚 GS Busanza Smart Library
+          📚 GS Busanza Library Management System
         </h1>
         <p className="text-gray-600 text-center mb-8">
-          AI-Powered Learning Platform, twige neza dukoresheje ikoranabuhanga
+          Manage books, borrowing, and library operations in one simple system.
         </p>
 
         {error && (
