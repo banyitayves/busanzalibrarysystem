@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Student {
   _id: string;
+  id?: string;
   name: string;
   username: string;
   email?: string;
@@ -30,99 +31,57 @@ export default function StudentBorrowingManagementSection() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all-students' | 'borrowed' | 'returned' | 'overdue'>('all-students');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    fetchStudents();
-    fetchBorrowRecords();
+    loadData();
   }, []);
 
-  const fetchStudents = async () => {
+  const loadData = async () => {
     try {
-      const response = await fetch('/api/students');
-      const data = await response.json();
-      setStudents(Array.isArray(data) ? data : []);
+      setLoading(true);
+      const [studentsResponse, borrowRecordsResponse] = await Promise.all([
+        fetch('/api/students'),
+        fetch('/api/borrow-records'),
+      ]);
+
+      const studentsData = await studentsResponse.json();
+      const borrowData = await borrowRecordsResponse.json();
+
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      setBorrowRecords(Array.isArray(borrowData) ? borrowData : []);
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error('Error fetching library data:', error);
       setStudents([]);
+      setBorrowRecords([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchBorrowRecords = async () => {
-    try {
-      const response = await fetch('/api/books');
-      const books = await response.json();
-      
-      // Mock borrow records for demo - in production this would come from the database
-      const mockBorrows: BorrowRecord[] = [
-        {
-          borrow_id: 'borrow_001',
-          student_id: '1',
-          student_name: 'John Student',
-          book_id: 'book_1',
-          book_title: 'Introduction to Mathematics',
-          status: 'borrowed',
-          borrow_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-          due_date: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
-        },
-        {
-          borrow_id: 'borrow_002',
-          student_id: '2',
-          student_name: 'Jane Student',
-          book_id: 'book_2',
-          book_title: 'World History Overview',
-          status: 'returned',
-          borrow_date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-          due_date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-          returned_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        },
-        {
-          borrow_id: 'borrow_003',
-          student_id: '3',
-          student_name: 'Admin Librarian',
-          book_id: 'book_3',
-          book_title: 'Computer Science Fundamentals',
-          status: 'overdue',
-          borrow_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-          due_date: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000),
-        },
-      ];
-      setBorrowRecords(mockBorrows);
-    } catch (error) {
-      console.error('Error fetching borrow records:', error);
     }
   };
 
   const getFilteredData = () => {
     switch (activeTab) {
       case 'borrowed':
-        return borrowRecords.filter(b => b.status === 'borrowed');
+        return borrowRecords.filter((record) => record.status === 'borrowed');
       case 'returned':
-        return borrowRecords.filter(b => b.status === 'returned');
+        return borrowRecords.filter((record) => record.status === 'returned');
       case 'overdue':
-        return borrowRecords.filter(b => b.status === 'overdue');
+        return borrowRecords.filter((record) => record.status === 'overdue');
       case 'all-students':
       default:
-        return students.filter(s =>
-          s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.username.toLowerCase().includes(searchTerm.toLowerCase())
+        return students.filter((student) =>
+          student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          student.username.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }
   };
 
   const handleReturnBook = async (borrowId: string) => {
     try {
-      const record = borrowRecords.find(b => b.borrow_id === borrowId);
-      if (record) {
-        const updated = borrowRecords.map(b =>
-          b.borrow_id === borrowId
-            ? { ...b, status: 'returned' as const, returned_date: new Date() }
-            : b
-        );
-        setBorrowRecords(updated);
-      }
+      const updated = borrowRecords.map((record) =>
+        record.borrow_id === borrowId ? { ...record, status: 'returned' as const, returned_date: new Date() } : record
+      );
+      setBorrowRecords(updated);
     } catch (error) {
       console.error('Error returning book:', error);
     }
@@ -130,17 +89,52 @@ export default function StudentBorrowingManagementSection() {
 
   const handleRenewBorrow = async (borrowId: string) => {
     try {
-      const record = borrowRecords.find(b => b.borrow_id === borrowId);
-      if (record) {
-        const updated = borrowRecords.map(b =>
-          b.borrow_id === borrowId
-            ? { ...b, due_date: new Date(b.due_date.getTime() + 14 * 24 * 60 * 60 * 1000) }
-            : b
-        );
-        setBorrowRecords(updated);
-      }
+      const updated = borrowRecords.map((record) =>
+        record.borrow_id === borrowId
+          ? { ...record, due_date: new Date(new Date(record.due_date).getTime() + 14 * 24 * 60 * 60 * 1000) }
+          : record
+      );
+      setBorrowRecords(updated);
     } catch (error) {
       console.error('Error renewing borrow:', error);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      const response = await fetch('/api/export-students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          className: 'All Students',
+          format: 'xlsx',
+          students: students.map((student) => ({
+            name: student.name,
+            email: student.email || 'N/A',
+            id: student.id || student._id,
+            role: student.role,
+            className: student.class_name || 'No Class',
+          })),
+        }),
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'all_students.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting students:', error);
+      alert('Failed to export Excel file.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -153,16 +147,24 @@ export default function StudentBorrowingManagementSection() {
 
   const stats = {
     totalStudents: students.length,
-    borrowedBooks: borrowRecords.filter(b => b.status === 'borrowed').length,
-    returnedBooks: borrowRecords.filter(b => b.status === 'returned').length,
-    overdueBooks: borrowRecords.filter(b => b.status === 'overdue').length,
+    borrowedBooks: borrowRecords.filter((record) => record.status === 'borrowed').length,
+    returnedBooks: borrowRecords.filter((record) => record.status === 'returned').length,
+    overdueBooks: borrowRecords.filter((record) => record.status === 'overdue').length,
   };
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
-      <h2 className="text-2xl font-bold">📊 Student Borrowing Management</h2>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h2 className="text-2xl font-bold">📊 Student Borrowing Management</h2>
+        <button
+          onClick={handleExportExcel}
+          disabled={exporting}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+        >
+          {exporting ? 'Preparing Excel...' : '⬇️ Download Excel'}
+        </button>
+      </div>
 
-      {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <p className="text-sm text-gray-600">Total Students</p>
@@ -182,7 +184,6 @@ export default function StudentBorrowingManagementSection() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b">
         <button
           onClick={() => { setActiveTab('all-students'); setSearchTerm(''); }}
@@ -226,23 +227,20 @@ export default function StudentBorrowingManagementSection() {
         </button>
       </div>
 
-      {/* Search Bar for Students Tab */}
       {activeTab === 'all-students' && (
         <div className="mb-4">
           <input
             type="text"
             placeholder="Search by student name or username..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(event) => setSearchTerm(event.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       )}
 
-      {/* Content */}
       <div className="overflow-x-auto">
         {activeTab === 'all-students' ? (
-          // Students List
           <table className="w-full text-sm">
             <thead className="bg-gray-100 border-b-2 border-gray-300">
               <tr>
@@ -250,7 +248,7 @@ export default function StudentBorrowingManagementSection() {
                 <th className="px-4 py-2 text-left font-semibold">Username</th>
                 <th className="px-4 py-2 text-left font-semibold">Role</th>
                 <th className="px-4 py-2 text-left font-semibold">Class</th>
-                <th className="px-4 py-2 text-left font-semibold">Joined</th>
+                <th className="px-4 py-2 text-left font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -261,26 +259,34 @@ export default function StudentBorrowingManagementSection() {
                   </td>
                 </tr>
               ) : (
-                getFilteredData().map((item: any) => (
-                  <tr key={item._id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium">{item.name}</td>
-                    <td className="px-4 py-2 text-gray-600">{item.username}</td>
-                    <td className="px-4 py-2">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
-                        {item.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">{item.class_name || 'N/A'}</td>
-                    <td className="px-4 py-2 text-gray-600">
-                      {item.created_at ? formatDate(item.created_at) : 'N/A'}
-                    </td>
-                  </tr>
-                ))
+                getFilteredData().map((item: any) => {
+                  const activeLoan = borrowRecords.find((record) => record.student_id === (item.id || item._id));
+                  return (
+                    <tr key={item._id || item.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{item.name}</td>
+                      <td className="px-4 py-2 text-gray-600">{item.username}</td>
+                      <td className="px-4 py-2">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                          {item.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2">{item.class_name || 'N/A'}</td>
+                      <td className="px-4 py-2">
+                        {activeLoan ? (
+                          <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">
+                            📖 {activeLoan.book_title}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-200 text-gray-700">No active loan</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         ) : (
-          // Borrow Records
           <table className="w-full text-sm">
             <thead className="bg-gray-100 border-b-2 border-gray-300">
               <tr>
@@ -349,15 +355,13 @@ export default function StudentBorrowingManagementSection() {
         )}
       </div>
 
-      {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-900 mb-2">ℹ️ Information</h3>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>✓ Track all student borrowing activities in real-time</li>
-          <li>✓ Manage returned books and mark them as returned</li>
-          <li>✓ Monitor overdue books and send reminders to students</li>
-          <li>✓ Renew book loans for students when requested</li>
-          <li>✓ View complete student roster and their status</li>
+          <li>✓ View which students currently have books from their class</li>
+          <li>✓ Download the full student roster as Excel</li>
+          <li>✓ Monitor overdue books and renew loans when needed</li>
         </ul>
       </div>
     </div>
