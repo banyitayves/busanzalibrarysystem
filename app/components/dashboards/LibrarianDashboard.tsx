@@ -8,6 +8,7 @@ import ClassesManagementSection from '@/app/components/features/ClassesManagemen
 import BookUploadSection from '@/app/components/features/BookUploadSection';
 import StudentBorrowingManagementSection from '@/app/components/features/StudentBorrowingManagementSection';
 import OfferBooksSection from '@/app/components/features/OfferBooksSection';
+import UserManagementSection from '@/app/components/features/UserManagementSection';
 
 export default function LibrarianDashboard() {
   const { user } = useAuth();
@@ -85,26 +86,7 @@ export default function LibrarianDashboard() {
 
         {activeTab === 'classes' && <ClassesManagementSection />}
 
-        {activeTab === 'users' && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-4">User Management</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-indigo-50 p-4 rounded">
-                <p className="text-sm text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-indigo-600">487</p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded">
-                <p className="text-sm text-gray-600">Students</p>
-                <p className="text-2xl font-bold text-blue-600">412</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded">
-                <p className="text-sm text-gray-600">Teachers</p>
-                <p className="text-2xl font-bold text-green-600">75</p>
-              </div>
-            </div>
-            <p className="text-gray-600">User management features available in Bulk Import tab</p>
-          </div>
-        )}
+        {activeTab === 'users' && <UserManagementSection />}
 
         {activeTab === 'reports' && <LibraryReportsSection />}
 

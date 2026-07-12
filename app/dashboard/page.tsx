@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import StudentDashboard from '@/app/components/dashboards/StudentDashboard';
 import TeacherDashboard from '@/app/components/dashboards/TeacherDashboard';
 import LibrarianDashboard from '@/app/components/dashboards/LibrarianDashboard';
+import UserSettingsSection from '@/app/components/features/UserSettingsSection';
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
@@ -58,7 +59,8 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <UserSettingsSection />
         {(user.role === 'student' || user.role === 'guest') && <StudentDashboard />}
         {user.role === 'teacher' && <TeacherDashboard />}
         {user.role === 'librarian' && <LibrarianDashboard />}
