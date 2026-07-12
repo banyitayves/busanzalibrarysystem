@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 // import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
+import SearchBar from './components/SearchBar';
 
 // Fonts disabled due to build environment network restrictions
 // const geistSans = Geist({
@@ -27,7 +28,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <header className="bg-white border-b">
+            <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+              <div className="text-lg font-semibold">Library</div>
+              <div className="flex-1">
+                <SearchBar />
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
