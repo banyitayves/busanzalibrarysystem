@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDatabase } from '@/lib/mongodb';
 
 const mockBorrowRecords = [
   {
@@ -35,5 +36,31 @@ const mockBorrowRecords = [
 ];
 
 export async function GET() {
+  const db = await getDatabase();
+
+  if (db) {
+    try {
+      const borrowsCollection = db.collection('book_borrows');
+      const records = await borrowsCollection
+        .find({})
+        .project({ borrow_id: 1, student_id: 1, student_name: 1, book_id: 1, book_title: 1, status: 1, borrow_date: 1, due_date: 1, returned_date: 1 })
+        .toArray();
+
+      return NextResponse.json(records.map((record: any) => ({
+        borrow_id: record.borrow_id,
+        student_id: record.student_id,
+        student_name: record.student_name,
+        book_id: record.book_id,
+        book_title: record.book_title,
+        status: record.status,
+        borrow_date: record.borrow_date,
+        due_date: record.due_date,
+        returned_date: record.returned_date,
+      })));
+    } catch (error) {
+      console.error('Error fetching borrow records from DB:', error);
+    }
+  }
+
   return NextResponse.json(mockBorrowRecords);
 }

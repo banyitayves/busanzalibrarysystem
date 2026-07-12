@@ -13,7 +13,7 @@ interface Student {
   loanStatus?: string;
 }
 
-interface Class {
+interface ClassGroup {
   name: string;
   count: number;
   students: Student[];
@@ -27,17 +27,34 @@ interface BorrowRecord {
   status: 'borrowed' | 'returned' | 'overdue';
 }
 
+const CLASS_OPTIONS = {
+  S1: ['S1A', 'S1B', 'S1C', 'S1D'],
+  S2: ['S2A', 'S2B', 'S2C', 'S2D', 'S2E', 'S2F'],
+  S3: ['S3A', 'S3B', 'S3C', 'S3D'],
+  S4: ['S4 MS2', 'S4 ARTS', 'S4 LANG'],
+  S5: ['S5 LFK', 'S5 MCE', 'S5 HGL'],
+  S6: ['S6 LFK', 'S6 MCE', 'S6 HGL'],
+};
+
+const ALL_CLASSES = Object.values(CLASS_OPTIONS).flat();
+
 export default function LibrarianClassesSection() {
-  const [classes, setClasses] = useState<Class[]>([]);
+  const [classes, setClasses] = useState<ClassGroup[]>([]);
   const [borrowRecords, setBorrowRecords] = useState<BorrowRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedClass, setExpandedClass] = useState<string | null>(null);
+  const [selectedClass, setSelectedClass] = useState<string>(ALL_CLASSES[0]);
   const [exportingClass, setExportingClass] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadClassesAndStudents();
   }, []);
+
+  useEffect(() => {
+    if (!classes.length && ALL_CLASSES.length) {
+      setSelectedClass(ALL_CLASSES[0]);
+    }
+  }, [classes]);
 
   const loadClassesAndStudents = async () => {
     try {
@@ -47,12 +64,12 @@ export default function LibrarianClassesSection() {
         fetch('/api/borrow-records'),
       ]);
 
-      const students = await studentsResponse.json();
-      const borrowed = await borrowRecordsResponse.json();
+      const studentsData = await studentsResponse.json();
+      const borrowData = await borrowRecordsResponse.json();
 
       const classMap = new Map<string, Student[]>();
-      const studentRecords = Array.isArray(students) ? students : [];
-      const loanRecords = Array.isArray(borrowed) ? borrowed : [];
+      const studentRecords = Array.isArray(studentsData) ? studentsData : [];
+      const loanRecords = Array.isArray(borrowData) ? borrowData : [];
 
       studentRecords.forEach((student: Student) => {
         const className = student.class_name || 'No Class';
@@ -70,16 +87,17 @@ export default function LibrarianClassesSection() {
         });
       });
 
-      const classList: Class[] = Array.from(classMap.entries())
-        .map(([name, studentsInClass]) => ({
-          name,
-          count: studentsInClass.length,
-          students: studentsInClass.sort((a, b) => a.name.localeCompare(b.name)),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const classList: ClassGroup[] = ALL_CLASSES.map((name) => ({
+        name,
+        count: classMap.get(name)?.length || 0,
+        students: classMap.get(name)?.sort((a, b) => a.name.localeCompare(b.name)) ?? [],
+      }));
 
       setClasses(classList);
       setBorrowRecords(loanRecords);
+      if (!ALL_CLASSES.includes(selectedClass)) {
+        setSelectedClass(classList[0]?.name || ALL_CLASSES[0]);
+      }
     } catch (error) {
       console.error('Error fetching classes:', error);
     } finally {
@@ -143,6 +161,8 @@ export default function LibrarianClassesSection() {
     );
   });
 
+  const selectedClassData = classes.find((item) => item.name === selectedClass);
+
   if (loading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
@@ -154,85 +174,110 @@ export default function LibrarianClassesSection() {
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold">📚 Classes & Students Management</h3>
-            <p className="text-sm text-gray-600">Review every class roster, flag students with active loans, and export class lists.</p>
+            <h3 className="text-lg font-bold">👥 Classes & Students</h3>
+            <p className="text-sm text-gray-600">
+              Browse all registration classes, select the class you want, and review enrolled students.
+            </p>
           </div>
           <input
             type="text"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search class or student"
-            className="px-3 py-2 border border-gray-300 rounded-lg w-full md:w-72"
+            placeholder="Search classes or students"
+            className="px-3 py-2 border border-gray-300 rounded-lg w-full md:w-80"
           />
         </div>
 
-        {filteredClasses.length === 0 ? (
-          <p className="text-gray-600">No matching classes found.</p>
-        ) : (
-          <div className="space-y-4">
-            {filteredClasses.map((classItem) => {
-              const activeBorrowers = classItem.students.filter((student) => student.hasBook).length;
-
-              return (
-                <div key={classItem.name} className="border rounded-lg p-4">
-                  <div
-                    onClick={() => setExpandedClass(expandedClass === classItem.name ? null : classItem.name)}
-                    className="flex justify-between items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4">
+          <div className="space-y-3">
+            <div className="bg-slate-50 p-4 rounded-lg border">
+              <p className="text-sm text-gray-600">Total registration classes</p>
+              <p className="text-3xl font-bold text-blue-600">{classes.length}</p>
+            </div>
+            <div className="overflow-hidden rounded-lg border bg-white">
+              <div className="border-b bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
+                Choose a class
+              </div>
+              <div className="max-h-[520px] overflow-auto">
+                {filteredClasses.map((classItem) => (
+                  <button
+                    key={classItem.name}
+                    onClick={() => setSelectedClass(classItem.name)}
+                    className={`w-full text-left px-4 py-3 border-b last:border-b-0 transition ${
+                      selectedClass === classItem.name
+                        ? 'bg-indigo-50 text-indigo-900'
+                        : 'hover:bg-slate-50 text-slate-700'
+                    }`}
                   >
-                    <div>
-                      <h4 className="font-semibold text-gray-800">{classItem.name}</h4>
-                      <p className="text-sm text-gray-500">{classItem.count} students • {activeBorrowers} with active books</p>
+                    <div className="flex justify-between gap-3 items-center">
+                      <span>{classItem.name}</span>
+                      <span className="text-xs text-slate-500">{classItem.count} students</span>
                     </div>
-                    <div className="flex gap-2 items-center">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          exportStudentsAsExcel(classItem.name);
-                        }}
-                        disabled={exportingClass === classItem.name}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                      >
-                        {exportingClass === classItem.name ? 'Preparing...' : '⬇️ Excel'}
-                      </button>
-                      <span className="text-gray-400">{expandedClass === classItem.name ? '▼' : '▶'}</span>
-                    </div>
-                  </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-                  {expandedClass === classItem.name && (
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="space-y-2">
-                        {classItem.students.map((student) => (
-                          <div key={student.id} className="flex flex-col gap-2 bg-gray-50 p-3 rounded md:flex-row md:items-center md:justify-between">
-                            <div>
-                              <p className="font-medium text-gray-800">{student.name}</p>
-                              <p className="text-sm text-gray-500">{student.email || 'No email provided'}</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2 items-center">
-                              {student.hasBook ? (
-                                <span className="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">
-                                  📖 Has book • {student.currentBook || 'Active loan'}
-                                </span>
-                              ) : (
-                                <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-200 text-gray-700">
-                                  No active loan
-                                </span>
-                              )}
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                {student.role}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+          <div className="space-y-4">
+            <div className="bg-white p-4 rounded-lg border">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h4 className="text-lg font-semibold text-slate-900">{selectedClassData?.name || 'No class selected'}</h4>
+                  <p className="text-sm text-gray-500">{selectedClassData?.count ?? 0} enrolled students</p>
+                </div>
+                <button
+                  onClick={() => exportStudentsAsExcel(selectedClassData?.name || '')}
+                  disabled={!selectedClassData || exportingClass === selectedClassData.name}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {exportingClass === selectedClassData?.name ? 'Preparing...' : 'Export class list'}
+                </button>
+              </div>
+            </div>
+
+            {selectedClassData?.students.length ? (
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 text-sm text-slate-600">
+                  <div>Student</div>
+                  <div>Status</div>
+                  <div>Loan</div>
+                </div>
+                <div className="divide-y">
+                  {selectedClassData.students.map((student) => (
+                    <div key={student.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-900">{student.name}</p>
+                        <p className="text-sm text-slate-500">{student.email || 'No email'}</p>
+                      </div>
+                      <div className="text-sm text-slate-700">
+                        {student.role}
+                      </div>
+                      <div className="flex flex-col gap-2 text-sm">
+                        {student.hasBook ? (
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-1 text-orange-800">
+                            📖 {student.loanStatus === 'overdue' ? 'Overdue' : 'Borrowed'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+                            No active loan
+                          </span>
+                        )}
+                        {student.currentBook && <span className="text-slate-500">{student.currentBook}</span>}
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <div className="bg-white p-6 rounded-lg border text-gray-600">
+                No students are registered in this class yet.
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
