@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
           role: u.role,
           class_name: u.class_name || null,
           level: u.level || null,
-          email: u.email || null,
-          theme: u.theme || 'system',
+          email: (u as any).email || null,
+          theme: (u as any).theme || 'system',
         }));
     }
 
