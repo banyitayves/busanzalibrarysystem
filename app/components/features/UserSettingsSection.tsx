@@ -53,7 +53,7 @@ export default function UserSettingsSection() {
     applyTheme(theme);
   }, [theme]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setMessage('');
