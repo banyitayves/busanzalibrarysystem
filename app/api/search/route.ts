@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
-import { getMockBooks } from '@/lib/mock-storage';
+import { getMockBooks, getMockUsers } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {
   try {
@@ -92,6 +92,23 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error('Fallback classes aggregation failed:', err);
+      }
+
+      // If still empty, use mock users to build class list
+      if (!result.classes || result.classes.length === 0) {
+        try {
+          const mockUsers = getMockUsers();
+          const classCounts: Record<string, number> = {};
+          const classRegex = regex || /.*/i;
+          mockUsers.forEach((u) => {
+            if (u.class_name && classRegex.test(u.class_name)) {
+              classCounts[u.class_name] = (classCounts[u.class_name] || 0) + 1;
+            }
+          });
+          result.classes = Object.keys(classCounts).sort().map((name) => ({ name, count: classCounts[name] }));
+        } catch (err) {
+          console.error('Mock classes fallback failed:', err);
+        }
       }
     }
 
