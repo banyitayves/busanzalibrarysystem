@@ -26,13 +26,9 @@ export default function SearchBar() {
 
   useEffect(() => {
     if (timer.current) window.clearTimeout(timer.current);
-    if (!q) {
-      setResults(null);
-      setOpen(false);
-      return;
-    }
-    setLoading(true);
-    timer.current = window.setTimeout(async () => {
+
+    const executeSearch = async () => {
+      setLoading(true);
       try {
         const res = await fetch(
           `/api/search?q=${encodeURIComponent(q)}&role=${encodeURIComponent(role)}`
@@ -45,12 +41,24 @@ export default function SearchBar() {
       } finally {
         setLoading(false);
       }
-    }, 300);
+    };
+
+    if (!q) {
+      if (!isLibrarian) {
+        setResults(null);
+        setOpen(false);
+        return;
+      }
+      executeSearch();
+      return;
+    }
+
+    timer.current = window.setTimeout(executeSearch, 300);
 
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };
-  }, [q, role]);
+  }, [q, role, isLibrarian]);
 
   return (
     <div ref={containerRef} className="relative w-full max-w-md">

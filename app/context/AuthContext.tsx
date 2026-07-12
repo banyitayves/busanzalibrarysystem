@@ -12,12 +12,14 @@ interface User {
   class_name?: string;
   level?: string;
   email?: string;
+  theme?: 'light' | 'dark' | 'system';
 }
 
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, name: string, role: UserRole, level?: string, className?: string) => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: data.user.role,
         class_name: data.user.class_name,
         level: data.user.level,
+        theme: data.user.theme || 'system',
       };
 
       setUser(userData);
@@ -107,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: data.user.role,
         class_name: data.user.class_name,
         level: data.user.level,
+        theme: data.user.theme || 'system',
       };
 
       setUser(userData);
@@ -116,13 +120,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+      const nextUser = { ...currentUser, ...updates };
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, updateUser, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
