@@ -51,8 +51,8 @@ You should see success messages. If you see database errors, check your `.env.lo
 - Password: `password123`
 
 **Librarian Account:**
-- Username: `librarian1`
-- Password: `password123`
+- Username: `0791756160`
+- Password: `Library2026`
 
 Go to: `http://localhost:3000/login`
 

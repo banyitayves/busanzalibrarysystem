@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 import LibraryReportsSection from '@/app/components/features/LibraryReportsSection';
 import CSVImportSection from '@/app/components/features/CSVImportSection';
@@ -13,6 +13,53 @@ import UserManagementSection from '@/app/components/features/UserManagementSecti
 export default function LibrarianDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('books');
+  const [bookStats, setBookStats] = useState({ totalBooks: 0, availableBooks: 0, borrowedBooks: 0, overdueBooks: 0 });
+  const [userStats, setUserStats] = useState({ totalUsers: 0, students: 0, teachers: 0, librarians: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setStatsLoading(true);
+        const [booksResponse, usersResponse, borrowResponse] = await Promise.all([
+          fetch('/api/books'),
+          fetch('/api/users?role=librarian'),
+          fetch('/api/borrow-records'),
+        ]);
+
+        const booksData = await booksResponse.json();
+        const usersData = await usersResponse.json();
+        const borrowData = await borrowResponse.json();
+
+        const books = Array.isArray(booksData) ? booksData : Array.isArray(booksData.books) ? booksData.books : [];
+        const borrowRecords = Array.isArray(borrowData) ? borrowData : [];
+        const users = Array.isArray(usersData.users) ? usersData.users : [];
+
+        const borrowedBooks = borrowRecords.filter((record: any) => record.status === 'borrowed' || record.status === 'overdue').length;
+        const overdueBooks = borrowRecords.filter((record: any) => record.status === 'overdue').length;
+
+        setBookStats({
+          totalBooks: books.length,
+          availableBooks: Math.max(0, books.length - borrowedBooks),
+          borrowedBooks,
+          overdueBooks,
+        });
+
+        setUserStats({
+          totalUsers: users.length,
+          students: users.filter((entry: any) => entry.role === 'student').length,
+          teachers: users.filter((entry: any) => entry.role === 'teacher').length,
+          librarians: users.filter((entry: any) => entry.role === 'librarian').length,
+        });
+      } catch (error) {
+        console.error('Failed to load librarian stats', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -21,7 +68,7 @@ export default function LibrarianDashboard() {
         <h2 className="text-3xl font-bold mb-2">👨‍💼 Librarian Management Panel</h2>
         <p>Manage the library collection, generate reports, import bulk data, and system oversight.</p>
         <div className="mt-3 p-2 bg-purple-400 rounded text-sm">
-          📞 Contact <strong>YVES</strong> at <strong>+250791756160</strong> for technical support
+          📞 Contact <strong>NSHIMIYIMANA Yves</strong> at <strong>+250791756160</strong> for technical support
         </div>
       </div>
 
@@ -60,19 +107,19 @@ export default function LibrarianDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded">
                 <p className="text-sm text-gray-600">Total Books</p>
-                <p className="text-2xl font-bold text-blue-600">1,247</p>
+                <p className="text-2xl font-bold text-blue-600">{statsLoading ? '...' : bookStats.totalBooks}</p>
               </div>
               <div className="bg-green-50 p-4 rounded">
                 <p className="text-sm text-gray-600">Available</p>
-                <p className="text-2xl font-bold text-green-600">892</p>
+                <p className="text-2xl font-bold text-green-600">{statsLoading ? '...' : bookStats.availableBooks}</p>
               </div>
               <div className="bg-orange-50 p-4 rounded">
                 <p className="text-sm text-gray-600">Borrowed</p>
-                <p className="text-2xl font-bold text-orange-600">355</p>
+                <p className="text-2xl font-bold text-orange-600">{statsLoading ? '...' : bookStats.borrowedBooks}</p>
               </div>
               <div className="bg-red-50 p-4 rounded">
                 <p className="text-sm text-gray-600">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">12</p>
+                <p className="text-2xl font-bold text-red-600">{statsLoading ? '...' : bookStats.overdueBooks}</p>
               </div>
             </div>
             <button className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">

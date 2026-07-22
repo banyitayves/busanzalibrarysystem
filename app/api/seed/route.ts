@@ -183,9 +183,9 @@ export async function GET(request: NextRequest) {
             created_at: new Date(),
           },
           {
-            username: 'librarian1',
-            password: 'password123',
-            name: 'Admin Librarian',
+            username: '0791756160',
+            password: 'Library2026',
+            name: 'NSHIMIYIMANA Yves',
             role: 'librarian',
             created_at: new Date(),
           },
@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
               file_type: 'txt',
               file_content: bookData.content,
               file_path: `/samples/${bookData.title.replace(/[^a-z0-9]/gi, '_')}`,
-              uploaded_by: 'librarian1',
+              uploaded_by: '0791756160',
               created_at: new Date(),
             } as any);
             booksAdded++;
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
           test_credentials: {
             student: { username: 'student1', password: 'password123' },
             teacher: { username: 'teacher1', password: 'password123' },
-            librarian: { username: 'librarian1', password: 'password123' },
+            librarian: { username: '0791756160', password: 'Library2026' },
           },
         },
         { status: 201 }
@@ -251,7 +251,7 @@ export async function GET(request: NextRequest) {
             file_type: 'txt',
             file_content: bookData.content,
             file_path: `/samples/${bookData.title.replace(/[^a-z0-9]/gi, '_')}`,
-            uploaded_by: 'librarian1',
+            uploaded_by: '0791756160',
             created_at: new Date(),
           });
         }
@@ -286,7 +286,7 @@ export async function GET(request: NextRequest) {
           test_credentials: {
             student: { username: 'student1', password: 'password123' },
             teacher: { username: 'teacher1', password: 'password123' },
-            librarian: { username: 'librarian1', password: 'password123' },
+            librarian: { username: '0791756160', password: 'Library2026' },
           },
         },
         { status: 201 }

@@ -135,7 +135,7 @@ export default function LoginPage() {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-xs font-semibold text-blue-900 mb-2">📞 Need Help?</p>
-          <p className="text-xs text-blue-800">Contact <strong>YVES</strong> at <strong>+250791756160</strong></p>
+          <p className="text-xs text-blue-800">Contact <strong>NSHIMIYIMANA Yves</strong> at <strong>+250791756160</strong></p>
           <p className="text-xs text-blue-800 mt-2">First time? Register a new account using the button below.</p>
         </div>
       </div>

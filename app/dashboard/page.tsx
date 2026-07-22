@@ -60,7 +60,7 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <UserSettingsSection />
+        {user.role === 'librarian' && <UserSettingsSection />}
         {(user.role === 'student' || user.role === 'guest') && <StudentDashboard />}
         {user.role === 'teacher' && <TeacherDashboard />}
         {user.role === 'librarian' && <LibrarianDashboard />}

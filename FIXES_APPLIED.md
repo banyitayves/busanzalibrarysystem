@@ -81,7 +81,7 @@ Go to http://localhost:3000/login
 ```
 student1 / password123
 teacher1 / password123
-librarian1 / password123
+0791756160 / Library2026
 ```
 
 ---

@@ -53,7 +53,7 @@ This course covers the basic principles of mathematics including:
 
 Mathematics is the foundation of all sciences and engineering disciplines. Understanding these concepts is essential for academic success.`,
     file_path: '/samples/introduction_to_mathematics',
-    uploaded_by: 'librarian1',
+    uploaded_by: '0791756160',
     created_at: new Date(),
   },
   {
@@ -76,7 +76,7 @@ Chapter 2: Thermodynamics
 
 Physics helps us understand how the world works, from the motion of planets to the behavior of atoms.`,
     file_path: '/samples/physics_for_beginners',
-    uploaded_by: 'librarian1',
+    uploaded_by: '0791756160',
     created_at: new Date(),
   },
   {
@@ -99,7 +99,7 @@ Module 2: Literary Devices
 
 Understanding literature enhances critical thinking and communication skills essential for success in all fields.`,
     file_path: '/samples/english_literature_classics',
-    uploaded_by: 'librarian1',
+    uploaded_by: '0791756160',
     created_at: new Date(),
   },
   {
@@ -128,7 +128,7 @@ Part 3: Modern Era
 
 History provides context for understanding our present and planning our future.`,
     file_path: '/samples/world_history_overview',
-    uploaded_by: 'librarian1',
+    uploaded_by: '0791756160',
     created_at: new Date(),
   },
   {
@@ -157,7 +157,7 @@ Chapter 3: Computer Systems
 
 Computer science is increasingly important in all modern professions.`,
     file_path: '/samples/computer_science_fundamentals',
-    uploaded_by: 'librarian1',
+    uploaded_by: '0791756160',
     created_at: new Date(),
   },
   {
@@ -185,7 +185,7 @@ Unit 3: Ecology
 
 Biology helps us understand ourselves and our environment.`,
     file_path: '/samples/biology_life_sciences',
-    uploaded_by: 'librarian1',
+    uploaded_by: '0791756160',
     created_at: new Date(),
   },
 ];
@@ -214,9 +214,9 @@ mockUsers = [
   },
   {
     _id: '3',
-    username: 'librarian1',
-    password: 'password123',
-    name: 'Admin Librarian',
+    username: '0791756160',
+    password: 'Library2026',
+    name: 'NSHIMIYIMANA Yves',
     role: 'librarian',
     created_at: new Date(),
   },

@@ -50,7 +50,7 @@ After running `/api/seed`, use these to login:
 ```
 Username: student1      Password: password123
 Username: teacher1      Password: password123
-Username: librarian1    Password: password123
+Username: 0791756160    Password: Library2026
 ```
 
 Visit: http://localhost:3000/login

@@ -300,7 +300,7 @@ For issues or questions:
 1. Check [SETUP_GUIDE.md](./SETUP_GUIDE.md)
 2. Review API documentation in comments
 3. Check Vercel logs: `vercel logs`
-4. Contact: YVES +250791756160
+4. Contact: NSHIMIYIMANA Yves +250791756160
 
 ## 📜 License
 

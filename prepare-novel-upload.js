@@ -56,7 +56,7 @@ upload_novel() {
         -F "title=$title" \\
         -F "author=$author" \\
         -F "description=$description" \\
-        -F "userId=librarian1" \\
+        -F "userId=0791756160" \\
         "$UPLOAD_URL")
     
     echo "$response" | jq '.' 2>/dev/null || echo "$response"
@@ -105,7 +105,7 @@ curl -X POST http://localhost:3000/api/books \\
   -F "title=A Man of the People" \\
   -F "author=Chinua Achebe" \\
   -F "description=A satirical novel set in post-independence Nigeria" \\
-  -F "userId=librarian1"
+  -F "userId=0791756160"
 \`\`\`
 
 ### Option 3: Using NodeJS Script
@@ -118,12 +118,14 @@ form.append('file', fs.createReadStream('a-man-of-the-people.pdf'));
 form.append('title', 'A Man of the People');
 form.append('author', 'Chinua Achebe');
 form.append('description', 'Classic African literature');
-form.append('userId', 'librarian1');
+form.append('userId', '0791756160');
 
 fetch('http://localhost:3000/api/books', {
   method: 'POST',
-  body: form
-}).then(r => r.json()).then(console.log);
+  body: form,
+})
+  .then((r) => r.json())
+  .then(console.log);
 \`\`\`
 
 ## Where to Download PDFs:

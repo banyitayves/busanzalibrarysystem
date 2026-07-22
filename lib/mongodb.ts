@@ -28,9 +28,9 @@ let mockUsers: any[] = [
   },
   {
     _id: '3',
-    username: 'librarian1',
-    password: 'password123',
-    name: 'Admin Librarian',
+    username: '0791756160',
+    password: 'Library2026',
+    name: 'NSHIMIYIMANA Yves',
     role: 'librarian',
     created_at: new Date(),
   },

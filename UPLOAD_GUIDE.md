@@ -47,7 +47,7 @@ curl -X POST http://localhost:3000/api/books \
   -F "title=A Man of the People" \
   -F "author=Chinua Achebe" \
   -F "description=Classic African novel" \
-  -F "userId=librarian1"
+  -F "userId=0791756160"
 
 # Response example:
 # {
@@ -71,7 +71,7 @@ $body = @{
     file = Get-Item $file
     title = $title
     author = $author
-    userId = "librarian1"
+    userId = "0791756160"
 }
 
 Invoke-WebRequest -Uri "http://localhost:3000/api/books" `
@@ -209,7 +209,7 @@ curl -X POST http://localhost:3000/api/books \
   -F "title=A Man of the People" \
   -F "author=Chinua Achebe" \
   -F "description=A satirical novel set in post-independence Nigeria" \
-  -F "userId=librarian1"
+  -F "userId=0791756160"
 
 # 3. Verify it was uploaded
 curl http://localhost:3000/api/books | jq '.[0]'

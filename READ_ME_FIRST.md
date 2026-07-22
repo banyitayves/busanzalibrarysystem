@@ -49,7 +49,7 @@ Go to: **http://localhost:3000/login**
 Use any of these accounts:
 - **student1** / password123
 - **teacher1** / password123
-- **librarian1** / password123
+- **0791756160** / Library2026
 
 ---
 
@@ -59,7 +59,7 @@ Use any of these accounts:
 ```
 Student: student1 / password123 (Class S6 LFK)
 Teacher: teacher1 / password123
-Admin: librarian1 / password123
+Admin: 0791756160 / Library2026
 ```
 
 ### Past Papers Imported
