@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
 import { addMockUser, getMockUsers } from '@/lib/mock-storage';
+import { getMysqlPool } from '@/lib/mysql';
 
 interface ImportResult {
   success: boolean;
@@ -102,6 +103,8 @@ export async function POST(request: Request) {
     };
 
     const db = await getDatabase();
+    const mysqlPool = getMysqlPool();
+    const mysqlConfigured = Boolean(mysqlPool);
     const importRun = Date.now();
 
     if (importType === 'books') {
@@ -153,7 +156,34 @@ export async function POST(request: Request) {
       }
 
       if (booksToImport.length > 0) {
-        if (db) {
+        if (mysqlConfigured) {
+          try {
+            await mysqlPool!.execute(
+              'INSERT INTO books (title, author, isbn, category, quantity, created_at, updated_at) VALUES (?,?,?,?,?,NOW(),NOW())',
+              [title, author, isbn, category, Number(quantity)]
+            );
+            result.importedCount++;
+          } catch (err) {
+            console.error('MySQL insert error (books):', err);
+            // fallback to MongoDB or memory
+            if (db) {
+              try {
+                const booksCollection = db.collection('book_catalog');
+                await booksCollection.insertMany(booksToImport as any[]);
+                result.importedCount = booksToImport.length;
+              } catch (err2) {
+                console.error('MongoDB insert error fallback:', err2);
+                importedBooks.push(...booksToImport);
+                result.importedCount = booksToImport.length;
+                result.warnings.push('Stored in memory (both MySQL and MongoDB unavailable)');
+              }
+            } else {
+              importedBooks.push(...booksToImport);
+              result.importedCount = booksToImport.length;
+              result.warnings.push('Stored in memory (MySQL unavailable)');
+            }
+          }
+        } else if (db) {
           try {
             const booksCollection = db.collection('book_catalog');
             await booksCollection.insertMany(booksToImport as any[]);
@@ -230,7 +260,26 @@ export async function POST(request: Request) {
           userRecord.student_no = `STU-${importRun}-${i}`;
         }
 
-        if (db) {
+        if (mysqlConfigured) {
+          try {
+            await mysqlPool!.execute(
+              'INSERT INTO users (username, password, name, role, class_name, level, created_at) VALUES (?,?,?,?,?,?,NOW())',
+              [
+                userRecord.username,
+                userRecord.password,
+                userRecord.name,
+                userRecord.role,
+                userRecord.class_name || null,
+                userRecord.level || null,
+              ]
+            );
+            result.importedCount++;
+          } catch (err) {
+            console.error('MySQL member insert error:', err);
+            result.failedCount++;
+            result.errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : 'Failed to save member to MySQL'}`);
+          }
+        } else if (db) {
           try {
             const usersCollection = db.collection('users');
             await usersCollection.insertOne(userRecord as any);
