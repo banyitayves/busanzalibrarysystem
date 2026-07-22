@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
+import { addMockUser, getMockUsers } from '@/lib/mock-storage';
 
 interface ImportResult {
   success: boolean;
@@ -9,14 +10,63 @@ interface ImportResult {
   warnings: string[];
 }
 
+interface DatabaseStatus {
+  provider: 'mongodb' | 'memory';
+  mongodbConfigured: boolean;
+  mysqlConfigured: boolean;
+  message: string;
+}
+
 // In-memory storage for imported books
 let importedBooks: any[] = [];
+
+function parseCsvLine(line: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function getDatabaseStatus(): DatabaseStatus {
+  const mongodbConfigured = Boolean(process.env.MONGODB_URI);
+  const mysqlConfigured = Boolean(process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME);
+
+  return {
+    provider: mongodbConfigured ? 'mongodb' : 'memory',
+    mongodbConfigured,
+    mysqlConfigured,
+    message: mysqlConfigured
+      ? 'MySQL variables are present. The app is still using the current storage layer for imports.'
+      : 'MySQL variables are not configured. Set DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME to enable MySQL persistence.',
+  };
+}
 
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const importType = formData.get('importType') as string;
+    const targetClass = ((formData.get('className') as string) || '').trim().toUpperCase();
 
     if (!file || !importType) {
       return NextResponse.json(
@@ -25,7 +75,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate file type
     if (!file.name.endsWith('.csv')) {
       return NextResponse.json(
         { error: 'Only CSV files are supported' },
@@ -33,7 +82,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Read file content
     const fileText = await file.text();
     const lines = fileText.split('\n').filter((line) => line.trim());
 
@@ -44,8 +92,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse CSV
-    const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+    const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
     const result: ImportResult = {
       success: true,
       importedCount: 0,
@@ -54,11 +101,12 @@ export async function POST(request: Request) {
       warnings: [],
     };
 
+    const db = await getDatabase();
+    const importRun = Date.now();
+
     if (importType === 'books') {
       const requiredHeaders = ['title', 'author', 'isbn', 'category', 'quantity'];
-      const missingHeaders = requiredHeaders.filter(
-        (h) => !headers.includes(h)
-      );
+      const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
 
       if (missingHeaders.length > 0) {
         return NextResponse.json(
@@ -69,23 +117,17 @@ export async function POST(request: Request) {
         );
       }
 
-      // Get database connection (will be null if MongoDB not available)
-      const db = await getDatabase();
-      
-      // Process book records
-      const booksToImport = [];
-      
+      const booksToImport: any[] = [];
+
       for (let i = 1; i < lines.length; i++) {
-        // Handle quoted values in CSV
-        const values = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''));
+        const values = parseCsvLine(lines[i]);
+        if (values.filter((v) => v).length === 0) continue;
 
-        if (values.filter((v) => v).length === 0) continue; // Skip empty rows
-
-        const title = values[headers.indexOf('title')];
-        const author = values[headers.indexOf('author')];
-        const isbn = values[headers.indexOf('isbn')];
-        const category = values[headers.indexOf('category')];
-        const quantity = values[headers.indexOf('quantity')];
+        const title = values[headers.indexOf('title')] || '';
+        const author = values[headers.indexOf('author')] || '';
+        const isbn = values[headers.indexOf('isbn')] || '';
+        const category = values[headers.indexOf('category')] || '';
+        const quantity = values[headers.indexOf('quantity')] || '';
 
         if (!title || !author || !isbn) {
           result.failedCount++;
@@ -95,13 +137,11 @@ export async function POST(request: Request) {
 
         if (isNaN(Number(quantity))) {
           result.failedCount++;
-          result.errors.push(
-            `Row ${i + 1}: Invalid quantity (must be a number)`
-          );
+          result.errors.push(`Row ${i + 1}: Invalid quantity (must be a number)`);
           continue;
         }
 
-        const bookData = {
+        booksToImport.push({
           title,
           author,
           isbn,
@@ -109,15 +149,11 @@ export async function POST(request: Request) {
           quantity: Number(quantity),
           created_at: new Date(),
           updated_at: new Date(),
-        };
-
-        booksToImport.push(bookData);
+        });
       }
 
-      // Insert books into database or in-memory storage
       if (booksToImport.length > 0) {
         if (db) {
-          // Use MongoDB if available
           try {
             const booksCollection = db.collection('book_catalog');
             await booksCollection.insertMany(booksToImport as any[]);
@@ -125,13 +161,11 @@ export async function POST(request: Request) {
             console.log(`✓ Imported ${booksToImport.length} books to MongoDB`);
           } catch (err) {
             console.error('MongoDB insert error:', err);
-            // Fallback to in-memory
             importedBooks.push(...booksToImport);
             result.importedCount = booksToImport.length;
             result.warnings.push('Stored in memory (MongoDB unavailable)');
           }
         } else {
-          // Store in memory when MongoDB is not available
           importedBooks.push(...booksToImport);
           result.importedCount = booksToImport.length;
           result.warnings.push('Stored in memory (MongoDB connection unavailable)');
@@ -140,9 +174,7 @@ export async function POST(request: Request) {
       }
     } else if (importType === 'members') {
       const requiredHeaders = ['name', 'role', 'joindate'];
-      const missingHeaders = requiredHeaders.filter(
-        (h) => !headers.includes(h)
-      );
+      const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
 
       if (missingHeaders.length > 0) {
         return NextResponse.json(
@@ -153,15 +185,17 @@ export async function POST(request: Request) {
         );
       }
 
-      // Process member records
+      const classHeaderIndex = headers.findIndex((header) => ['class', 'classname', 'class_name'].includes(header));
+
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map((v) => v.trim());
+        const values = parseCsvLine(lines[i]);
+        if (values.filter((v) => v).length === 0) continue;
 
-        if (values.filter((v) => v).length === 0) continue; // Skip empty rows
-
-        const name = values[headers.indexOf('name')];
-        const role = values[headers.indexOf('role')];
-        const joindate = values[headers.indexOf('joindate')];
+        const name = values[headers.indexOf('name')] || '';
+        const role = values[headers.indexOf('role')] || '';
+        const joindate = values[headers.indexOf('joindate')] || '';
+        const csvClass = classHeaderIndex >= 0 ? values[classHeaderIndex] || '' : '';
+        const normalizedRole = role.toLowerCase();
 
         if (!name || !role) {
           result.failedCount++;
@@ -169,15 +203,51 @@ export async function POST(request: Request) {
           continue;
         }
 
-        if (!['student', 'teacher', 'librarian'].includes(role.toLowerCase())) {
+        if (!['student', 'teacher', 'librarian'].includes(normalizedRole)) {
           result.failedCount++;
-          result.errors.push(
-            `Row ${i + 1}: Invalid role (must be student, teacher, or librarian)`
-          );
+          result.errors.push(`Row ${i + 1}: Invalid role (must be student, teacher, or librarian)`);
           continue;
         }
 
-        result.importedCount++;
+        const className = (csvClass || targetClass || 'NO CLASS').trim().toUpperCase();
+        const generatedId = `imported-${importRun}-${i}`;
+        const usernameBase = name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'member';
+        const userRecord: any = {
+          _id: generatedId,
+          id: generatedId,
+          username: `${usernameBase}${i}`,
+          password: 'changeme123',
+          name,
+          role: normalizedRole,
+          joindate,
+          created_at: new Date(),
+        };
+
+        if (normalizedRole === 'student') {
+          // assign class and a unique student number
+          userRecord.class_name = className;
+          userRecord.level = className;
+          userRecord.student_no = `STU-${importRun}-${i}`;
+        }
+
+        if (db) {
+          try {
+            const usersCollection = db.collection('users');
+            await usersCollection.insertOne(userRecord as any);
+            result.importedCount++;
+          } catch (err) {
+            console.error('MongoDB member insert error:', err);
+            result.failedCount++;
+            result.errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : 'Failed to save member'}`);
+          }
+        } else {
+          addMockUser(userRecord as any);
+          result.importedCount++;
+        }
+      }
+
+      if (result.importedCount > 0 && !db) {
+        result.warnings.push('Members were stored in memory because no MongoDB connection is available.');
       }
     } else {
       return NextResponse.json(
@@ -189,6 +259,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: result.failedCount === 0,
       result,
+      databaseStatus: getDatabaseStatus(),
       message: `Import completed: ${result.importedCount} records imported, ${result.failedCount} failed`,
     });
   } catch (error) {
@@ -200,13 +271,11 @@ export async function POST(request: Request) {
   }
 }
 
-// GET endpoint to retrieve imported books
 export async function GET() {
   try {
     const db = await getDatabase();
-    
+
     if (db) {
-      // Try to get from MongoDB
       try {
         const booksCollection = db.collection('book_catalog');
         const books = await booksCollection.find({}).toArray();
@@ -214,17 +283,18 @@ export async function GET() {
           source: 'mongodb',
           count: books.length,
           books,
+          databaseStatus: getDatabaseStatus(),
         });
       } catch (err) {
         console.error('MongoDB read error:', err);
       }
     }
-    
-    // Return in-memory books
+
     return NextResponse.json({
       source: 'memory',
       count: importedBooks.length,
       books: importedBooks,
+      databaseStatus: getDatabaseStatus(),
     });
   } catch (error) {
     console.error('Error retrieving books:', error);
