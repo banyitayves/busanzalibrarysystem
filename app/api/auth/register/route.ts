@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockUsers, setMockUsers, addMockUser } from '@/lib/mock-storage';
 
 const VALID_CLASSES = {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     let insertedId;
 
     if (db) {
-      // Try MongoDB
+      // Try SQLite
       const usersCollection = db.collection('users');
 
       existingUser = await usersCollection.findOne({

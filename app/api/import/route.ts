@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { addMockUser, getMockUsers } from '@/lib/mock-storage';
-import { getMysqlPool } from '@/lib/mysql';
 
 interface ImportResult {
   success: boolean;
@@ -12,9 +11,8 @@ interface ImportResult {
 }
 
 interface DatabaseStatus {
-  provider: 'mongodb' | 'memory';
-  mongodbConfigured: boolean;
-  mysqlConfigured: boolean;
+  provider: 'sqlite' | 'memory';
+  sqliteConfigured: boolean;
   message: string;
 }
 
@@ -49,16 +47,14 @@ function parseCsvLine(line: string): string[] {
 }
 
 function getDatabaseStatus(): DatabaseStatus {
-  const mongodbConfigured = Boolean(process.env.MONGODB_URI);
-  const mysqlConfigured = Boolean(process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME);
+  const sqliteConfigured = Boolean(process.env.SQLITE_DB_PATH);
 
   return {
-    provider: mongodbConfigured ? 'mongodb' : 'memory',
-    mongodbConfigured,
-    mysqlConfigured,
-    message: mysqlConfigured
-      ? 'MySQL variables are present. The app is still using the current storage layer for imports.'
-      : 'MySQL variables are not configured. Set DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME to enable MySQL persistence.',
+    provider: sqliteConfigured ? 'sqlite' : 'memory',
+    sqliteConfigured,
+    message: sqliteConfigured
+      ? 'SQLite is configured for imports and persistence.'
+      : 'SQLite DB path is not set. Set SQLITE_DB_PATH to enable persistence.',
   };
 }
 
@@ -103,8 +99,6 @@ export async function POST(request: Request) {
     };
 
     const db = await getDatabase();
-    const mysqlPool = getMysqlPool();
-    const mysqlConfigured = Boolean(mysqlPool);
     const importRun = Date.now();
 
     if (importType === 'books') {
@@ -156,50 +150,16 @@ export async function POST(request: Request) {
       }
 
       if (booksToImport.length > 0) {
-        if (mysqlConfigured) {
-          try {
-            await mysqlPool!.execute(
-              'INSERT INTO books (title, author, isbn, category, quantity, created_at, updated_at) VALUES (?,?,?,?,?,NOW(),NOW())',
-              [title, author, isbn, category, Number(quantity)]
-            );
-            result.importedCount++;
-          } catch (err) {
-            console.error('MySQL insert error (books):', err);
-            // fallback to MongoDB or memory
-            if (db) {
-              try {
-                const booksCollection = db.collection('book_catalog');
-                await booksCollection.insertMany(booksToImport as any[]);
-                result.importedCount = booksToImport.length;
-              } catch (err2) {
-                console.error('MongoDB insert error fallback:', err2);
-                importedBooks.push(...booksToImport);
-                result.importedCount = booksToImport.length;
-                result.warnings.push('Stored in memory (both MySQL and MongoDB unavailable)');
-              }
-            } else {
-              importedBooks.push(...booksToImport);
-              result.importedCount = booksToImport.length;
-              result.warnings.push('Stored in memory (MySQL unavailable)');
-            }
-          }
-        } else if (db) {
-          try {
-            const booksCollection = db.collection('book_catalog');
-            await booksCollection.insertMany(booksToImport as any[]);
-            result.importedCount = booksToImport.length;
-            console.log(`✓ Imported ${booksToImport.length} books to MongoDB`);
-          } catch (err) {
-            console.error('MongoDB insert error:', err);
-            importedBooks.push(...booksToImport);
-            result.importedCount = booksToImport.length;
-            result.warnings.push('Stored in memory (MongoDB unavailable)');
-          }
-        } else {
+        try {
+          const booksCollection = db.collection('book_catalog');
+          await booksCollection.insertMany(booksToImport as any[]);
+          result.importedCount = booksToImport.length;
+          console.log(`✓ Imported ${booksToImport.length} books to SQLite`);
+        } catch (err) {
+          console.error('SQLite insert error (books):', err);
           importedBooks.push(...booksToImport);
           result.importedCount = booksToImport.length;
-          result.warnings.push('Stored in memory (MongoDB connection unavailable)');
-          console.log(`✓ Imported ${booksToImport.length} books to memory`);
+          result.warnings.push('Stored in memory because SQLite insert failed');
         }
       }
     } else if (importType === 'members') {
@@ -260,43 +220,19 @@ export async function POST(request: Request) {
           userRecord.student_no = `STU-${importRun}-${i}`;
         }
 
-        if (mysqlConfigured) {
-          try {
-            await mysqlPool!.execute(
-              'INSERT INTO users (username, password, name, role, class_name, level, created_at) VALUES (?,?,?,?,?,?,NOW())',
-              [
-                userRecord.username,
-                userRecord.password,
-                userRecord.name,
-                userRecord.role,
-                userRecord.class_name || null,
-                userRecord.level || null,
-              ]
-            );
-            result.importedCount++;
-          } catch (err) {
-            console.error('MySQL member insert error:', err);
-            result.failedCount++;
-            result.errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : 'Failed to save member to MySQL'}`);
-          }
-        } else if (db) {
-          try {
-            const usersCollection = db.collection('users');
-            await usersCollection.insertOne(userRecord as any);
-            result.importedCount++;
-          } catch (err) {
-            console.error('MongoDB member insert error:', err);
-            result.failedCount++;
-            result.errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : 'Failed to save member'}`);
-          }
-        } else {
-          addMockUser(userRecord as any);
+        try {
+          const usersCollection = db.collection('users');
+          await usersCollection.insertOne(userRecord as any);
           result.importedCount++;
+        } catch (err) {
+          console.error('SQLite member insert error:', err);
+          result.failedCount++;
+          result.errors.push(`Row ${i + 1}: ${err instanceof Error ? err.message : 'Failed to save member'}`);
         }
       }
 
       if (result.importedCount > 0 && !db) {
-        result.warnings.push('Members were stored in memory because no MongoDB connection is available.');
+        result.warnings.push('Members were stored in memory because SQLite is unavailable.');
       }
     } else {
       return NextResponse.json(
@@ -329,13 +265,13 @@ export async function GET() {
         const booksCollection = db.collection('book_catalog');
         const books = await booksCollection.find({}).toArray();
         return NextResponse.json({
-          source: 'mongodb',
+          source: 'sqlite',
           count: books.length,
           books,
           databaseStatus: getDatabaseStatus(),
         });
       } catch (err) {
-        console.error('MongoDB read error:', err);
+        console.error('SQLite read error:', err);
       }
     }
 

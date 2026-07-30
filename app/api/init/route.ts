@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // MongoDB collections are created automatically on first write
+    // SQLite collections are created automatically on first write
     // No initialization needed
-    return NextResponse.json({ message: 'Database ready (MongoDB)' });
+    return NextResponse.json({ message: 'Database ready (SQLite)' });
   } catch (error) {
     console.error('Database check error:', error);
     return NextResponse.json(
@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // MongoDB collections are created automatically on first write
+    // SQLite collections are created automatically on first write
     // No initialization needed
-    return NextResponse.json({ message: 'Database ready (MongoDB)' });
+    return NextResponse.json({ message: 'Database ready (SQLite)' });
   } catch (error) {
     console.error('Database check error:', error);
     return NextResponse.json(

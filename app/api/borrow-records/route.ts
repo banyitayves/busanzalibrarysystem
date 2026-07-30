@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 
 const mockBorrowRecords = [
   {

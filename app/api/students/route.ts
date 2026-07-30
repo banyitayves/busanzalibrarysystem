@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockUsers } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     let students: any[] = [];
 
     if (db) {
-      // Try MongoDB - fetch users collection and filter for students
+      // Try SQLite - fetch users collection and filter for students
       const usersCollection = db.collection('users');
       students = await usersCollection
         .find({ role: 'student' })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockBooks, getMockUsers } from '@/lib/mock-storage';
 
 const ALL_CLASSES = [

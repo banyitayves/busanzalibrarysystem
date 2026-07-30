@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 
 const SAMPLE_BOOKS = [
   {
@@ -442,7 +442,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (err) {
-        console.log('MongoDB sample insert failed, continuing');
+        console.log('SQLite sample insert failed, continuing');
       }
     }
 
@@ -469,7 +469,7 @@ export async function GET(request: NextRequest) {
         const booksCollection = db.collection('books');
         bookCount = await booksCollection.countDocuments();
       } catch (err) {
-        console.log('MongoDB count failed');
+        console.log('SQLite count failed');
         bookCount = SAMPLE_BOOKS.length; // Assume samples are loaded
       }
     } else {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 
 const DEFAULT_COURSES = [
   {
@@ -50,10 +50,10 @@ async function seedCoursesIfEmpty() {
           created_at: new Date(),
         })) as any
       );
-      console.log(`✅ ${DEFAULT_COURSES.length} default courses seeded to MongoDB`);
+      console.log(`✅ ${DEFAULT_COURSES.length} default courses seeded to SQLite`);
     }
   } catch (error) {
-    console.error('Error seeding courses to MongoDB:', error);
+    console.error('Error seeding courses to SQLite:', error);
   }
 }
 
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(courses);
     }
   } catch (error) {
-    console.error('MongoDB error, falling back to in-memory:', error);
+    console.error('SQLite error, falling back to in-memory:', error);
   }
 
   // Fallback to in-memory storage

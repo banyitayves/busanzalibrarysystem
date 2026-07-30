@@ -1,4 +1,4 @@
-// Shared in-memory storage for development when MongoDB is unavailable
+// Shared in-memory storage for development when SQLite is unavailable
 
 export interface MockBook {
   _id: string;

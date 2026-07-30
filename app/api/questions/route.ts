@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAnswer } from '@/lib/ai-service';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockQuestions, findMockQuestion, findMockQuestions, addMockQuestion, updateMockQuestion, getMockBooks } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase();
 
     if (db) {
-      // Try MongoDB
+      // Try SQLite
       const questionsCollection = db.collection('questions');
       
       if (qId) {
@@ -173,10 +173,10 @@ export async function POST(request: NextRequest) {
     };
 
     if (db) {
-      // Try MongoDB
+      // Try SQLite
       const questionsCollection = db.collection('questions');
       await questionsCollection.insertOne(newQuestion as any);
-      console.log(`✅ Question saved to MongoDB: ${questionId}`);
+      console.log(`✅ Question saved to SQLite: ${questionId}`);
     } else {
       // Fallback to in-memory
       addMockQuestion({

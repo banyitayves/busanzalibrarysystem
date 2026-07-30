@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
           created_at: new Date(),
         } as any);
       } catch (err) {
-        console.log('MongoDB upload failed, continuing with mock response');
+        console.log('SQLite upload failed, continuing with mock response');
       }
     }
 

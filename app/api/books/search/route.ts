@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockBooks } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
           .limit(20)
           .toArray();
       } catch (err) {
-        console.log('MongoDB search failed, using fallback');
+        console.log('SQLite search failed, using fallback');
         books = [];
       }
     }
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (err) {
-        console.log('MongoDB operation failed, using mock results');
+        console.log('SQLite operation failed, using mock results');
       }
     }
 

@@ -11,9 +11,8 @@ interface ImportResult {
 }
 
 interface DatabaseStatus {
-  provider: 'mongodb' | 'memory';
-  mongodbConfigured: boolean;
-  mysqlConfigured: boolean;
+  provider: 'sqlite' | 'memory';
+  sqliteConfigured: boolean;
   message: string;
 }
 
@@ -206,13 +205,10 @@ export default function CSVImportSection() {
         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
           <h4 className="font-semibold text-slate-900 mb-2">Database status</h4>
           <p className="text-sm text-slate-700">
-            Storage layer: <span className="font-semibold">{databaseStatus.provider === 'mongodb' ? 'MongoDB' : 'In-memory fallback'}</span>
+            Storage layer: <span className="font-semibold">{databaseStatus.provider === 'sqlite' ? 'SQLite' : 'In-memory fallback'}</span>
           </p>
           <p className="text-sm text-slate-700">
-            MySQL env vars: <span className="font-semibold">{databaseStatus.mysqlConfigured ? 'configured' : 'not configured'}</span>
-          </p>
-          <p className="text-sm text-slate-700">
-            MongoDB env vars: <span className="font-semibold">{databaseStatus.mongodbConfigured ? 'configured' : 'not configured'}</span>
+            SQLite env vars: <span className="font-semibold">{databaseStatus.sqliteConfigured ? 'configured' : 'not configured'}</span>
           </p>
           <p className="text-sm text-slate-600 mt-2">{databaseStatus.message}</p>
         </div>

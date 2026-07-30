@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockUsers, setMockUsers, getMockBooks, addMockBook } from '@/lib/mock-storage';
 
 const SAMPLE_BOOKS = [
@@ -130,12 +130,12 @@ export async function GET(request: NextRequest) {
   try {
     const db = await getDatabase();
     
-    // Use MongoDB if available, otherwise use in-memory storage
+    // Use SQLite if available, otherwise use in-memory storage
     let userCount = 0;
     let bookCount = 0;
     
     if (db) {
-      // MongoDB available
+      // SQLite available
       const usersCollection = db.collection('users');
       const booksCollection = db.collection('books');
       
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
             message: '✅ Database already seeded', 
             users: userCount,
             books: bookCount,
-            storage: 'MongoDB',
+            storage: 'SQLite',
           },
           { status: 200 }
         );
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
         ];
 
         await usersCollection.insertMany(testUsers);
-        console.log('✅ Test users created in MongoDB');
+        console.log('✅ Test users created in SQLite');
       }
 
       // Add sample books if needed
@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
             booksAdded++;
           }
         }
-        console.log(`✅ ${booksAdded} sample books added to MongoDB`);
+        console.log(`✅ ${booksAdded} sample books added to SQLite`);
       }
 
       return NextResponse.json(
@@ -224,7 +224,7 @@ export async function GET(request: NextRequest) {
           message: '✅ Database seeded successfully',
           users_created: userCount === 0 ? 4 : 0,
           books_added: booksAdded,
-          storage: 'MongoDB',
+          storage: 'SQLite',
           test_credentials: {
             student: { username: 'student1', password: 'password123' },
             teacher: { username: 'teacher1', password: 'password123' },
@@ -235,7 +235,7 @@ export async function GET(request: NextRequest) {
       );
     } else {
       // Fallback to in-memory storage
-      console.log('⚠️  MongoDB not available, using in-memory fallback for seeding');
+      console.log('⚠️  SQLite not available, using in-memory fallback for seeding');
       
       let mockUsers = getMockUsers();
       
@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
       
       return NextResponse.json(
         {
-          message: '✅ In-memory storage initialized (MongoDB unavailable)',
+          message: '✅ In-memory storage initialized (SQLite unavailable)',
           users_ready: mockUsers.length,
           books_added: SAMPLE_BOOKS.length,
           storage: 'In-Memory Fallback',

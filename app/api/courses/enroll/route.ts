@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 
-// In-memory enrollment storage (for when MongoDB is unavailable)
+// In-memory enrollment storage (for when SQLite is unavailable)
 let enrollments: Array<{
   id: string;
   student_id: string;
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
           { status: 201 }
         );
       } catch (dbError) {
-        console.log('MongoDB error, using in-memory fallback for enrollment');
+        console.log('SQLite error, using in-memory fallback for enrollment');
         // Fall through to in-memory storage below
       }
     }
@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(enrolledCourses);
       } catch (dbError) {
-        console.log('MongoDB error, using in-memory fallback');
+        console.log('SQLite error, using in-memory fallback');
         throw dbError;
       }
     } else {

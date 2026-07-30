@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 
 // Mock data for fallback
 const mockUsers = [
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     let classmates: any[] = [];
 
     if (db) {
-      // Try MongoDB
+      // Try SQLite
       const usersCollection = (db.collection('users') as any);
 
       if (userId) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as crypto from 'crypto';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockUsers } from '@/lib/mock-storage';
 
 export async function POST(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     let user;
 
     if (db) {
-      // Try MongoDB
+      // Try SQLite
       const usersCollection = db.collection('users');
       user = await usersCollection.findOne({
         username: username.toLowerCase(),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockUsers, setMockUsers } from '@/lib/mock-storage';
 
 export async function GET(request: NextRequest) {

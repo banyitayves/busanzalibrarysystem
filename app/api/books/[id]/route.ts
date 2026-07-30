@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ObjectId } from 'mongodb';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { getMockBooks } from '@/lib/mock-storage';
 
 export async function GET(
@@ -16,18 +15,13 @@ export async function GET(
     let book: any = null;
 
     if (db) {
-      // Try MongoDB
       const booksCollection = db.collection('books');
-      // Try to match by string _id first, then by ObjectId if valid
-      const filter: any = { $or: [{ _id: id }] };
-      if (ObjectId.isValid(id)) {
-        filter.$or.push({ _id: new ObjectId(id) });
-      }
-      book = await booksCollection.findOne(filter);
-    } else {
-      // Fallback to in-memory storage
+      book = await booksCollection.findOne({ $or: [{ _id: id }, { book_id: id }] } as any);
+    }
+
+    if (!book) {
       const mockBooks = getMockBooks();
-      book = mockBooks.find(b => b._id === id);
+      book = mockBooks.find(b => b._id === id || b.book_id === id);
     }
 
     if (!book) {
@@ -120,7 +114,7 @@ export async function POST(
             borrow_date: new Date(),
           } as any);
         } catch (err) {
-          console.log('MongoDB borrow failed, continuing with mock response');
+          console.log('SQLite borrow failed, continuing with mock response');
         }
       }
 
@@ -138,7 +132,7 @@ export async function POST(
             { $set: { status: 'returned', returned_date: new Date() } }
           );
         } catch (err) {
-          console.log('MongoDB return failed, continuing with mock response');
+          console.log('SQLite return failed, continuing with mock response');
         }
       }
 
@@ -160,7 +154,7 @@ export async function POST(
             created_at: new Date(),
           } as any);
         } catch (err) {
-          console.log('MongoDB question failed, continuing with mock response');
+          console.log('SQLite question failed, continuing with mock response');
         }
       }
 

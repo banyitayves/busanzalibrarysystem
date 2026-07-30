@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { getDatabase } from '@/lib/mongodb';
+import { getDatabase } from '@/lib/sqlite';
 import { extractTextFromFile, splitTextIntoChunks, cleanText } from '@/lib/file-processor';
 import { generateBookSummary } from '@/lib/gemini-service';
 import { addMockBook, getMockBooks } from '@/lib/mock-storage';
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     if (db) {
       const booksCollection = db.collection('books');
       await booksCollection.insertOne(newBook as any);
-      console.log(`✅ Book saved to MongoDB: ${title}`);
+      console.log(`✅ Book saved to SQLite: ${title}`);
     } else {
       addMockBook(newBook as any);
       console.log(`✅ Book saved to memory: ${title}`);
