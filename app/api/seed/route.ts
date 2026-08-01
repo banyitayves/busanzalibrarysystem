@@ -126,6 +126,27 @@ Biology helps us understand ourselves and our environment.`,
   },
 ];
 
+const SCHOOL_CLASS_NAMES = [
+  'S1A', 'S1B', 'S1C', 'S1D',
+  'S2A', 'S2B', 'S2C', 'S2D', 'S2E', 'S2F',
+  'S3A', 'S3B', 'S3C', 'S3D',
+  'S4 MS2', 'S4 ARTS', 'S4 LANG',
+  'S5 LFK', 'S5 MCE', 'S5 HGL',
+  'S6 LFK', 'S6 MCE', 'S6 HGL',
+];
+
+function buildSchoolUsers() {
+  return SCHOOL_CLASS_NAMES.map((className, index) => ({
+    username: `student${index + 1}`,
+    password: 'password123',
+    name: `Student ${index + 1}`,
+    role: 'student',
+    level: className.split(' ')[0],
+    class_name: className,
+    created_at: new Date(),
+  }));
+}
+
 export async function GET(request: NextRequest) {
   try {
     const db = await getDatabase();
@@ -189,10 +210,20 @@ export async function GET(request: NextRequest) {
             role: 'librarian',
             created_at: new Date(),
           },
+          ...buildSchoolUsers(),
         ];
 
         await usersCollection.insertMany(testUsers);
         console.log('✅ Test users created in SQLite');
+      } else {
+        const existingUsers = await usersCollection.find({ role: 'student' }).project({ username: 1 }).toArray();
+        const existingUsernames = new Set(existingUsers.map((entry) => entry.username));
+        const missingStudents = buildSchoolUsers().filter((student) => !existingUsernames.has(student.username));
+
+        if (missingStudents.length > 0) {
+          await usersCollection.insertMany(missingStudents);
+          console.log(`✅ Restored ${missingStudents.length} missing school classes`);
+        }
       }
 
       // Add sample books if needed

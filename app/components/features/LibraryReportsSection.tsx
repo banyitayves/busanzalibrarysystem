@@ -23,13 +23,25 @@ export default function LibraryReportsSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reportType }),
       });
-      const data = await response.json();
+
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (error) {
+        throw new Error(text || 'The server returned a non-JSON response.');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate report');
+      }
+
       if (data.report) {
-        setReports([data.report, ...reports]);
+        setReports((currentReports) => [data.report, ...currentReports]);
       }
     } catch (error) {
       console.error('Error generating report:', error);
-      alert('Failed to generate report');
+      alert(error instanceof Error ? error.message : 'Failed to generate report');
     } finally {
       setGenerating(false);
     }
@@ -42,7 +54,18 @@ export default function LibraryReportsSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reportId }),
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (error) {
+        throw new Error(text || 'The server returned a non-JSON response.');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to export report');
+      }
+
       const element = document.createElement('a');
       const file = new Blob([data.csv], { type: 'text/csv' });
       element.href = URL.createObjectURL(file);
@@ -52,7 +75,7 @@ export default function LibraryReportsSection() {
       document.body.removeChild(element);
     } catch (error) {
       console.error('Error exporting report:', error);
-      alert('Failed to export report');
+      alert(error instanceof Error ? error.message : 'Failed to export report');
     }
   };
 

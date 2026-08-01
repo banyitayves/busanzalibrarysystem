@@ -23,10 +23,19 @@ export default function UserManagementSection() {
       try {
         setLoading(true);
         const response = await fetch('/api/users?role=librarian');
-        const data = await response.json();
+        const text = await response.text();
+        let data: any = {};
+
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (error) {
+          throw new Error(text || 'The server returned a non-JSON response.');
+        }
+
         if (!response.ok) {
           throw new Error(data.error || 'Unable to fetch users');
         }
+
         setUsers(data.users || []);
       } catch (err: any) {
         setError(err.message || 'Failed to load users');

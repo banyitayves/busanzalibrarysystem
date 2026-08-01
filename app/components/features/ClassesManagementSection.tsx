@@ -64,10 +64,25 @@ export default function LibrarianClassesSection() {
         fetch('/api/borrow-records'),
       ]);
 
-      const studentsData = await studentsResponse.json();
-      const borrowData = await borrowRecordsResponse.json();
+      const studentsText = await studentsResponse.text();
+      const borrowText = await borrowRecordsResponse.text();
 
-      const classMap = new Map<string, Student[]>();
+      let studentsData: any[] = [];
+      let borrowData: any[] = [];
+
+      try {
+        studentsData = studentsText ? JSON.parse(studentsText) : [];
+      } catch {
+        studentsData = [];
+      }
+
+      try {
+        borrowData = borrowText ? JSON.parse(borrowText) : [];
+      } catch {
+        borrowData = [];
+      }
+
+      const classMap = new Map<string, Student[]>(ALL_CLASSES.map((name) => [name, []]));
       const studentRecords = Array.isArray(studentsData) ? studentsData : [];
       const loanRecords = Array.isArray(borrowData) ? borrowData : [];
 
@@ -87,6 +102,10 @@ export default function LibrarianClassesSection() {
         });
       });
 
+      if (!classMap.has('No Class')) {
+        classMap.set('No Class', []);
+      }
+
       const classList: ClassGroup[] = ALL_CLASSES.map((name) => ({
         name,
         count: classMap.get(name)?.length || 0,
@@ -100,6 +119,15 @@ export default function LibrarianClassesSection() {
       }
     } catch (error) {
       console.error('Error fetching classes:', error);
+      setClasses(
+        ALL_CLASSES.map((name) => ({
+          name,
+          count: 0,
+          students: [],
+        }))
+      );
+      setBorrowRecords([]);
+      setSelectedClass(ALL_CLASSES[0]);
     } finally {
       setLoading(false);
     }
