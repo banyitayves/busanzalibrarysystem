@@ -254,8 +254,8 @@ function collection(name: string) {
   const table = sanitizeCollectionName(name);
 
   function loadDocuments() {
-    const rows = sqlite.prepare(`SELECT doc FROM "${table}"`).all();
-    return rows.map(parseJsonDoc);
+    const rows = sqlite.prepare(`SELECT doc FROM "${table}"`).all() as Array<{ doc: string }>;
+    return rows.map((row) => parseJsonDoc(row));
   }
 
   function writeDocument(id: string, document: any) {
@@ -311,6 +311,32 @@ function collection(name: string) {
       writeDocument(existingId, updated);
       return { matchedCount: 1, modifiedCount: 1 };
     },
+    async findOneAndUpdate(filter: any, update: any, options?: any) {
+      const documents = loadDocuments();
+      const existing = documents.find((document) => matchesFilter(document, filter));
+      if (!existing) {
+        return { value: null, lastErrorObject: { n: 0, updatedExisting: false }, ok: 0 };
+      }
+
+      const existingId = existing._id;
+      const updated = { ...existing };
+      if (update && typeof update === 'object' && !Array.isArray(update)) {
+        if (update.$set && typeof update.$set === 'object') {
+          Object.assign(updated, update.$set);
+        }
+        if (update.$set === undefined) {
+          Object.assign(updated, update);
+        }
+      }
+
+      writeDocument(existingId, updated);
+      return {
+        value: updated,
+        lastErrorObject: { n: 1, updatedExisting: true },
+        ok: 1,
+        ...(options && options.returnDocument === 'after' ? {} : {}),
+      };
+    },
     async deleteOne(filter: any) {
       const documents = loadDocuments();
       const existing = documents.find((document) => matchesFilter(document, filter));
@@ -323,7 +349,7 @@ function collection(name: string) {
     async countDocuments(filter: any = {}) {
       return loadDocuments().filter((document) => matchesFilter(document, filter)).length;
     },
-    async aggregate(pipeline: any[] = []) {
+    aggregate(pipeline: any[] = []) {
       let documents = loadDocuments();
       for (const stage of pipeline) {
         if (stage.$match) {

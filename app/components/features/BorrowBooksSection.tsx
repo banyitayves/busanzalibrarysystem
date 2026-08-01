@@ -24,7 +24,10 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
   const [message, setMessage] = useState('');
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const { user } = useAuth();
-  const isGuest = user?.role === 'guest';
+  const borrowedRole = user?.role === 'teacher' ? 'teacher' : user?.role === 'student' ? 'student' : 'guest';
+  const canBorrow = user && (user.role === 'student' || user.role === 'teacher');
+  const isGuest = user?.role === 'guest' || !canBorrow;
+  const maxLoanLabel = borrowedRole === 'teacher' ? 'Teachers can borrow multiple books and return them within 3 months.' : 'Students can borrow only one book at a time and must return within 2 weeks.';
 
   useEffect(() => {
     fetchBooks();
@@ -52,18 +55,23 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
 
   const handleBorrow = async (bookId: string) => {
     if (isGuest) {
-      setMessage('❌ Guest users cannot borrow books. Please create an account to borrow.');
+      setMessage('❌ Only students and teachers can borrow books. Please create an account to borrow.');
       return;
     }
-    
+
+    const borrowRole = user?.role === 'teacher' ? 'teacher' : 'student';
+    const dueDate = new Date(Date.now() + (borrowRole === 'teacher' ? 90 : 14) * 24 * 60 * 60 * 1000);
+
     try {
       const response = await fetch(`/api/books/${bookId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'borrow',
-          studentId: user?.id || '1', // Replace with actual user ID
-          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+          studentId: user?.id || '1',
+          userRole: borrowRole,
+          borrowerName: user?.name || 'Library user',
+          dueDate,
         }),
       });
 
@@ -89,6 +97,10 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">Borrow Books</h2>
+
+      <div className="p-3 rounded-md mb-4 bg-indigo-100 text-indigo-800 border border-indigo-200">
+        ℹ️ {maxLoanLabel}
+      </div>
 
       {isGuest && (
         <div className="p-3 rounded-md mb-4 bg-orange-100 text-orange-700 border border-orange-300">

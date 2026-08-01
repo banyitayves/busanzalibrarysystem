@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 
-interface Student {
-  _id: string;
+interface LibraryUser {
+  id: string;
+  _id?: string;
   name: string;
   username: string;
   email?: string;
-  role: string;
+  role: 'student' | 'teacher' | string;
   class_name?: string;
 }
 
@@ -30,10 +31,11 @@ interface BookOffer {
 }
 
 export default function OfferBooksSection() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [users, setUsers] = useState<LibraryUser[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [offers, setOffers] = useState<BookOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUserRole, setSelectedUserRole] = useState<'student' | 'teacher'>('student');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [selectedBook, setSelectedBook] = useState<string>('');
   const [message, setMessage] = useState('');
@@ -47,15 +49,26 @@ export default function OfferBooksSection() {
 
   const fetchData = async () => {
     try {
-      const [studentsRes, booksRes] = await Promise.all([
-        fetch('/api/students'),
+      const [usersRes, booksRes] = await Promise.all([
+        fetch('/api/users?role=librarian'),
         fetch('/api/books'),
       ]);
 
-      const studentsData = await studentsRes.json();
+      const usersData = await usersRes.json();
       const booksData = await booksRes.json();
+      const libraryUsers = Array.isArray(usersData.users)
+        ? usersData.users.filter((user: any) => ['student', 'teacher'].includes(user.role))
+        : [];
 
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      setUsers(libraryUsers.map((user: any) => ({
+        id: String(user.id || user._id),
+        _id: String(user.id || user._id),
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        class_name: user.class_name,
+      })));
       setBooks(
         Array.isArray(booksData)
           ? booksData.map((book: any) => ({
@@ -106,22 +119,21 @@ export default function OfferBooksSection() {
     }
 
     try {
-      const student = students.find(s => s._id === selectedStudent);
+      const recipient = users.find(u => String(u.id) === selectedStudent);
       const book = books.find(b => b.id === selectedBook);
 
-      if (!student || !book) {
-        setOfferMessage('❌ Invalid student or book selection');
+      if (!recipient || !book) {
+        setOfferMessage('❌ Invalid recipient or book selection');
         return;
       }
 
-      // Create offer
       const newOffer: BookOffer = {
         id: `offer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         student_id: selectedStudent,
-        student_name: student.name,
+        student_name: recipient.name,
         book_id: selectedBook,
         book_title: book.title,
-        message: customMessage || `I think you might enjoy reading "${book.title}" by ${book.author}. It could be great for your learning!`,
+        message: customMessage || `I think you might enjoy reading "${book.title}" by ${book.author}. It could be useful for ${recipient.role === 'teacher' ? 'your teaching and study resources' : 'your learning journey'}!`,
         status: 'sent',
         sent_date: new Date(),
       };
@@ -132,7 +144,7 @@ export default function OfferBooksSection() {
       setSelectedStudent('');
       setSelectedBook('');
       setCustomMessage('');
-      setOfferMessage(`✅ Book offer sent to ${student.name}!`);
+      setOfferMessage(`✅ Book offer sent to ${recipient.name}!`);
 
       setTimeout(() => setOfferMessage(''), 3000);
     } catch (error) {
@@ -169,7 +181,7 @@ export default function OfferBooksSection() {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
-      <h2 className="text-2xl font-bold">📬 Offer Books to Students</h2>
+      <h2 className="text-2xl font-bold">📬 Offer Books to Students or Teachers</h2>
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -219,25 +231,42 @@ export default function OfferBooksSection() {
       {activeTab === 'send' ? (
         <form onSubmit={handleSendOffer} className="space-y-4 bg-gray-50 p-6 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Select Student */}
             <div>
-              <label className="block text-sm font-semibold mb-2">Select Student *</label>
+              <label className="block text-sm font-semibold mb-2">Recipient Type *</label>
+              <select
+                value={selectedUserRole}
+                onChange={(e) => {
+                  const nextRole = e.target.value as 'student' | 'teacher';
+                  setSelectedUserRole(nextRole);
+                  setSelectedStudent('');
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">Select {selectedUserRole === 'student' ? 'Student' : 'Teacher'} *</label>
               <select
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Choose a student --</option>
-                {students
-                  .filter(s => s.role === 'student')
-                  .map(student => (
-                    <option key={student._id} value={student._id}>
-                      {student.name} ({student.class_name || 'N/A'})
+                <option value="">-- Choose a {selectedUserRole} --</option>
+                {users
+                  .filter(user => user.role === selectedUserRole)
+                  .map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.class_name || user.role})
                     </option>
                   ))}
               </select>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Select Book */}
             <div>
               <label className="block text-sm font-semibold mb-2">Select Book *</label>
@@ -273,7 +302,7 @@ export default function OfferBooksSection() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-blue-900 mb-2">📝 Preview</h4>
               <p className="text-sm text-blue-800">
-                {customMessage || `I think you might enjoy reading "${books.find(b => b.id === selectedBook)?.title}" by ${books.find(b => b.id === selectedBook)?.author}. It could be great for your learning!`}
+                {customMessage || `I think you might enjoy reading "${books.find(b => b.id === selectedBook)?.title}" by ${books.find(b => b.id === selectedBook)?.author}. It could be useful for ${selectedUserRole === 'teacher' ? 'your teaching and study resources' : 'your learning journey'}!`}
               </p>
             </div>
           )}
@@ -336,11 +365,11 @@ export default function OfferBooksSection() {
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <h3 className="font-semibold text-green-900 mb-2">💡 How to Use</h3>
         <ul className="text-sm text-green-800 space-y-1">
-          <li>✓ Select a student and book from the dropdowns</li>
+          <li>✓ Select a student or teacher and a book from the dropdowns</li>
           <li>✓ Optionally add a personalized message</li>
-          <li>✓ Send the offer - it will appear in the student's inbox</li>
+          <li>✓ Send the offer - it will appear in the recipient's inbox</li>
           <li>✓ Track offer status: Sent, Viewed, Accepted, or Declined</li>
-          <li>✓ Use this to recommend relevant books to students based on their interests</li>
+          <li>✓ Recommend books for both learning and teaching needs</li>
         </ul>
       </div>
     </div>

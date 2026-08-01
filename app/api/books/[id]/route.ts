@@ -55,6 +55,13 @@ export async function GET(
   }
 }
 
+function getDueDateForRole(role: string, override?: string | Date) {
+  if (override) return new Date(override);
+
+  const days = role === 'teacher' ? 90 : 14;
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,7 +69,10 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { action, studentId, question, dueDate } = body;
+    const { action, studentId, userId, question, dueDate, userRole, role } = body;
+    const borrowerId = studentId || userId;
+    const borrowerRole = String(userRole || role || 'student').toLowerCase();
+    const isTeacher = borrowerRole === 'teacher';
 
     const db = await getDatabase();
 
@@ -71,16 +81,19 @@ export async function POST(
         try {
           const borrowsCollection = db.collection('book_borrows');
           const booksCollection = db.collection('books');
-          const existingBorrow = await borrowsCollection.findOne({
-            student_id: studentId,
-            status: 'borrowed',
-          } as any);
-          
-          if (existingBorrow) {
-            return NextResponse.json(
-              { error: 'You can only borrow 1 book at a time. Please return your current book first.' },
-              { status: 400 }
-            );
+
+          if (!isTeacher) {
+            const existingBorrow = await borrowsCollection.findOne({
+              student_id: borrowerId,
+              status: 'borrowed',
+            } as any);
+
+            if (existingBorrow) {
+              return NextResponse.json(
+                { error: 'Students can borrow only one book at a time. Please return your current book first.' },
+                { status: 400 }
+              );
+            }
           }
 
           const bookRecord = await booksCollection.findOne({ $or: [{ _id: id }, { book_id: id }] } as any);
@@ -100,14 +113,15 @@ export async function POST(
       }
 
       const borrowId = `borrow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const dueDateValue = dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      const dueDateValue = getDueDateForRole(borrowerRole, dueDate);
 
       if (db) {
         try {
           const borrowsCollection = db.collection('book_borrows');
           await borrowsCollection.insertOne({
             borrow_id: borrowId,
-            student_id: studentId,
+            student_id: borrowerId,
+            user_role: borrowerRole,
             book_id: id,
             status: 'borrowed',
             due_date: dueDateValue,
@@ -118,8 +132,9 @@ export async function POST(
         }
       }
 
+      const returnWindow = borrowerRole === 'teacher' ? '3 months' : '2 weeks';
       return NextResponse.json(
-        { id: borrowId, message: 'Book borrowed successfully' },
+        { id: borrowId, message: `Book borrowed successfully. Return deadline: ${returnWindow}.` },
         { status: 201 }
       );
     } else if (action === 'return') {

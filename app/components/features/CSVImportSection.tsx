@@ -117,7 +117,7 @@ export default function CSVImportSection() {
             <div className="flex gap-4">
               {[
                 { type: 'books', label: '📚 Books', desc: 'Import book collection' },
-                { type: 'members', label: '👥 Members', desc: 'Import library members' },
+                { type: 'members', label: '👥 Library Users', desc: 'Import students, teachers, and librarians' },
               ].map(({ type, label, desc }) => (
                 <button
                   key={type}
@@ -157,6 +157,10 @@ export default function CSVImportSection() {
                 </p>
               </div>
             )}
+
+            <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-800">
+              <strong>Accepted library user roles:</strong> student, teacher, librarian
+            </div>
 
             <div className="border-2 border-dashed border-indigo-300 p-6 rounded-lg text-center">
               <input
