@@ -13,21 +13,11 @@ type ThemeOption = (typeof THEME_OPTIONS)[number]['value'];
 
 function applyTheme(theme: ThemeOption) {
   const root = document.documentElement;
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  if (theme === 'system') {
-    root.style.removeProperty('--background');
-    root.style.removeProperty('--foreground');
-    return;
-  }
-
-  if (theme === 'dark') {
-    root.style.setProperty('--background', '#0a0a0a');
-    root.style.setProperty('--foreground', '#ededed');
-    return;
-  }
-
-  root.style.setProperty('--background', '#ffffff');
-  root.style.setProperty('--foreground', '#171717');
+  root.classList.toggle('dark', isDark);
+  root.dataset.theme = theme;
+  root.style.colorScheme = isDark ? 'dark' : 'light';
 }
 
 export default function UserSettingsSection() {

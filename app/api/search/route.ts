@@ -34,6 +34,8 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get('q') || '';
     const role = (searchParams.get('role') || 'guest').toLowerCase();
     const isLibrarian = role === 'librarian';
+    const isDeputyHeadTeacher = role === 'deputy_head_teacher';
+    const canViewUsers = isLibrarian || isDeputyHeadTeacher;
     const regex = q ? new RegExp(q, 'i') : null;
 
     const db = await getDatabase();
@@ -44,6 +46,32 @@ export async function GET(request: NextRequest) {
     };
 
     let classCounts: Record<string, number> = {};
+    if (canViewUsers) {
+      if (db) {
+        try {
+          const usersCol = db.collection('users');
+          const users = await usersCol
+            .find(regex ? { $or: [{ name: { $regex: regex } }, { username: { $regex: regex } }, { class_name: { $regex: regex } }, { role: { $regex: regex } }] } : {})
+            .project({ _id: 1, name: 1, username: 1, role: 1, class_name: 1, level: 1 })
+            .limit(20)
+            .toArray();
+
+          result.users = users
+            .filter((user: any) => ['student', 'teacher', 'librarian', 'deputy_head_teacher'].includes(user.role))
+            .map((user: any) => ({
+              id: user._id,
+              name: user.name,
+              username: user.username,
+              role: user.role,
+              class_name: user.class_name || null,
+              level: user.level || null,
+            }));
+        } catch (err) {
+          console.error('User search failed:', err);
+        }
+      }
+    }
+
     if (isLibrarian) {
       if (db) {
         try {

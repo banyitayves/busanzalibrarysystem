@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title id="title">GS Busanza logo</title>
+  <desc id="desc">A circular emblem with the letters G and S.</desc>
+  <defs>
+    <linearGradient id="grad" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="90" fill="url(#grad)"/>
+  <circle cx="100" cy="100" r="72" fill="white" opacity="0.16"/>
+  <path d="M64 54h42c18 0 30 12 30 28 0 14-8 22-21 26l22 31h-24l-19-28h-9v28H64V54zm24 17v25h14c11 0 17-5 17-13 0-8-6-12-17-12H88z" fill="white"/>
+  <path d="M118 118h22v18h-22z" fill="#dbeafe" opacity="0.9"/>
+  <path d="M70 139c10 7 22 11 35 11 19 0 35-7 46-18l-12-13c-8 8-18 12-34 12-10 0-19-2-27-7l-8 15z" fill="#e0e7ff" opacity="0.9"/>
+</svg>

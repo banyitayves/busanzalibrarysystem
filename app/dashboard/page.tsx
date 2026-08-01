@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const roleLabel = user?.role === 'deputy_head_teacher' ? 'Deputy Head Teacher' : user?.role || 'User';
 
   useEffect(() => {
     setMounted(true);
@@ -46,7 +47,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">📚 Library Management System</h1>
             <p className="text-sm text-gray-600">
-              Welcome, {user.name}! ({user.role})
+              Welcome, {user.name}! ({roleLabel})
             </p>
           </div>
           <button
@@ -60,10 +61,10 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {user.role === 'librarian' && <UserSettingsSection />}
+        {(user.role === 'librarian' || user.role === 'deputy_head_teacher') && <UserSettingsSection />}
         {(user.role === 'student' || user.role === 'guest') && <StudentDashboard />}
         {user.role === 'teacher' && <TeacherDashboard />}
-        {user.role === 'librarian' && <LibrarianDashboard />}
+        {(user.role === 'librarian' || user.role === 'deputy_head_teacher') && <LibrarianDashboard />}
       </main>
     </div>
   );

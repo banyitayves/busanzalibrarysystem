@@ -14,6 +14,8 @@ export default function SearchBar() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const role = user?.role || 'guest';
   const isLibrarian = role === 'librarian';
+  const isDeputyHeadTeacher = role === 'deputy_head_teacher';
+  const canViewUsers = isLibrarian || isDeputyHeadTeacher;
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -44,7 +46,7 @@ export default function SearchBar() {
     };
 
     if (!q) {
-      if (!isLibrarian) {
+      if (!canViewUsers) {
         setResults(null);
         setOpen(false);
         return;
@@ -67,7 +69,7 @@ export default function SearchBar() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => { if (results) setOpen(true); }}
-          placeholder={isLibrarian ? 'Search classes or books...' : 'Search books...'}
+          placeholder={canViewUsers ? 'Search books, students, or teachers...' : 'Search books...'}
           className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
@@ -83,28 +85,50 @@ export default function SearchBar() {
       {open && results && (
         <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded shadow-lg max-h-80 overflow-auto">
           <div className="p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <strong>Classes</strong>
-              {!isLibrarian && (
-                <span className="text-xs text-gray-500">Available for librarians only</span>
-              )}
-            </div>
-            {isLibrarian ? (
-              results.classes && results.classes.length > 0 ? (
-                <ul className="mb-3">
-                  {results.classes.map((c: any) => (
-                    <li key={c.name} className="py-1 text-sm">
-                      <Link href={`/classes/${encodeURIComponent(c.name)}`} className="text-blue-700 hover:underline">
-                        {c.name}
-                      </Link>
-                      <span className="text-gray-500 ml-2">({c.count})</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-sm text-gray-500 mb-3">No matching classes</div>
-              )
-            ) : (
+            {isLibrarian && (
+              <>
+                <div className="mb-2 flex items-center justify-between">
+                  <strong>Classes</strong>
+                </div>
+                {results.classes && results.classes.length > 0 ? (
+                  <ul className="mb-3">
+                    {results.classes.map((c: any) => (
+                      <li key={c.name} className="py-1 text-sm">
+                        <Link href={`/classes/${encodeURIComponent(c.name)}`} className="text-blue-700 hover:underline">
+                          {c.name}
+                        </Link>
+                        <span className="text-gray-500 ml-2">({c.count})</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-gray-500 mb-3">No matching classes</div>
+                )}
+              </>
+            )}
+
+            {canViewUsers && (
+              <>
+                <div className="mb-2">
+                  <strong>Users</strong>
+                </div>
+                {results.users && results.users.length > 0 ? (
+                  <ul className="mb-3">
+                    {results.users.map((user: any) => (
+                      <li key={user.id} className="py-1 text-sm">
+                        <span className="text-gray-800 font-medium">{user.name}</span>
+                        <span className="ml-2 text-gray-500">({user.role})</span>
+                        {user.class_name && <span className="ml-2 text-gray-500">{user.class_name}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-gray-500 mb-3">No matching students or teachers</div>
+                )}
+              </>
+            )}
+
+            {!isLibrarian && !canViewUsers && (
               <div className="text-sm text-gray-500 mb-3">Search classes requires librarian access.</div>
             )}
 

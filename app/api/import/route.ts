@@ -193,9 +193,9 @@ export async function POST(request: Request) {
           continue;
         }
 
-        if (!['student', 'teacher', 'librarian'].includes(normalizedRole)) {
+        if (!['student', 'teacher', 'librarian', 'deputy_head_teacher'].includes(normalizedRole)) {
           result.failedCount++;
-          result.errors.push(`Row ${i + 1}: Invalid role (must be student, teacher, or librarian)`);
+          result.errors.push(`Row ${i + 1}: Invalid role (must be student, teacher, librarian, or deputy_head_teacher)`);
           continue;
         }
 

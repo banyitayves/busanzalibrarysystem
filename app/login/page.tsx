@@ -61,9 +61,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-800 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-          📚 GS Busanza Library Management System
-        </h1>
+        <div className="mb-6 flex flex-col items-center">
+          <img src="/gs-busanza-logo.svg" alt="GS Busanza logo" className="h-20 w-20 rounded-full border-2 border-indigo-200 bg-white p-2 shadow-sm" />
+          <h1 className="mt-4 text-3xl font-bold text-gray-800 text-center">
+            GS Busanza
+          </h1>
+          <p className="text-center text-sm font-medium text-indigo-700">Library Management System</p>
+        </div>
         <p className="text-gray-600 text-center mb-8">
           Manage books, borrowing, and library operations in one simple system.
         </p>
@@ -134,8 +138,9 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs font-semibold text-blue-900 mb-2">📞 Need Help?</p>
-          <p className="text-xs text-blue-800">Contact <strong>NSHIMIYIMANA Yves</strong> at <strong>+250791756160</strong></p>
+          <p className="text-xs font-semibold text-blue-900 mb-2">� Librarian</p>
+          <p className="text-xs text-blue-800"><strong>NSHIMIYIMANA Yves</strong></p>
+          <p className="text-xs text-blue-800">Phone: <strong>+250791756160</strong></p>
           <p className="text-xs text-blue-800 mt-2">First time? Register a new account using the button below.</p>
         </div>
       </div>

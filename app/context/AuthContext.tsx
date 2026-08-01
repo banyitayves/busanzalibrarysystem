@@ -2,7 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'librarian' | 'student' | 'teacher' | 'guest' | null;
+export type UserRole = 'librarian' | 'student' | 'teacher' | 'deputy_head_teacher' | 'guest' | null;
+
+function applyThemePreference(theme?: 'light' | 'dark' | 'system') {
+  const root = document.documentElement;
+  const resolvedTheme = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  root.classList.toggle('dark', resolvedTheme);
+  root.dataset.theme = theme || 'system';
+  root.style.colorScheme = resolvedTheme ? 'dark' : 'light';
+}
 
 interface User {
   id: string | number;
@@ -31,16 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
     const savedUser = localStorage.getItem('user');
+    let parsedUser: User | null = null;
+
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
       } catch (error) {
         console.error('Error parsing saved user:', error);
         localStorage.removeItem('user');
       }
     }
+
+    applyThemePreference(parsedUser?.theme || 'system');
     setIsLoading(false);
   }, []);
 
@@ -68,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         theme: data.user.theme || 'system',
       };
 
+      applyThemePreference(userData.theme);
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
@@ -113,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         theme: data.user.theme || 'system',
       };
 
+      applyThemePreference(userData.theme);
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
@@ -124,12 +138,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((currentUser) => {
       if (!currentUser) return currentUser;
       const nextUser = { ...currentUser, ...updates };
+      applyThemePreference(nextUser.theme || 'system');
       localStorage.setItem('user', JSON.stringify(nextUser));
       return nextUser;
     });
   };
 
   const logout = () => {
+    applyThemePreference('system');
     setUser(null);
     localStorage.removeItem('user');
   };

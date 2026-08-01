@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!['student', 'teacher', 'librarian', 'deputy_head_teacher'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid role selected' },
+        { status: 400 }
+      );
+    }
+
     // Validate class if student
     if (role === 'student') {
       const validClasses = VALID_CLASSES[level as keyof typeof VALID_CLASSES];

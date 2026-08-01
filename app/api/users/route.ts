@@ -9,8 +9,10 @@ export async function GET(request: NextRequest) {
     const username = searchParams.get('username')?.toLowerCase();
     const filterRole = searchParams.get('filterRole');
     const isLibrarian = role === 'librarian';
+    const isDeputyHeadTeacher = role === 'deputy_head_teacher';
+    const canViewUsers = isLibrarian || isDeputyHeadTeacher;
 
-    if (!isLibrarian && !username) {
+    if (!canViewUsers && !username) {
       return NextResponse.json(
         { error: 'Only librarians may view the full user list' },
         { status: 403 }
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
       const usersCollection = db.collection('users');
       const filter: any = {};
       if (filterRole) filter.role = filterRole;
-      if (!isLibrarian && username) filter.username = username;
+      if (!canViewUsers && username) filter.username = username;
       const rawUsers = await usersCollection
         .find(filter)
         .project({ _id: 1, username: 1, name: 1, role: 1, class_name: 1, level: 1, email: 1, theme: 1 })
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest) {
       const mockUsers = getMockUsers();
       users = mockUsers
         .filter((u) => {
-          if (!isLibrarian && username) {
+          if (!canViewUsers && username) {
             return u.username.toLowerCase() === username;
           }
           if (filterRole) {

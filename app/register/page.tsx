@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'librarian'>('student');
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'librarian' | 'deputy_head_teacher'>('student');
   const [selectedLevel, setSelectedLevel] = useState<keyof typeof CLASS_OPTIONS>('S1');
   const [selectedClass, setSelectedClass] = useState('S1A');
   const [isLoading, setIsLoading] = useState(false);
@@ -199,6 +199,17 @@ export default function RegisterPage() {
                 }`}
               >
                 📚 Librarian
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('deputy_head_teacher')}
+                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
+                  selectedRole === 'deputy_head_teacher'
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
+                }`}
+              >
+                👩‍🏫 Deputy Head Teacher
               </button>
             </div>
           </div>

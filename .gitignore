@@ -45,3 +45,10 @@ next-env.d.ts
 *.pdf
 *.docx
 *.doc
+
+# local database files
+library.db
+library.db-*
+*.db
+*.db-shm
+*.db-wal
