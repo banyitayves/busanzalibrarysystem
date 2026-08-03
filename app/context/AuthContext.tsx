@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { fetchJson } from '@/lib/fetch-json';
 
 export type UserRole = 'librarian' | 'student' | 'teacher' | 'deputy_head_teacher' | 'guest' | null;
 
@@ -58,15 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const data = await fetchJson<{ user: User; token?: string; error?: string }>('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!data.user) {
         throw new Error(data.error || 'Login failed');
       }
 
@@ -97,22 +96,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     className?: string
   ) => {
     try {
-      const response = await fetch('/api/auth/register', {
+      const data = await fetchJson<{ user: User; token?: string; error?: string }>('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username,
           password,
           name,
-          role,
+          role: role === 'student' ? 'student' : 'student',
           level: role === 'student' ? level : null,
           class_name: role === 'student' ? className : null,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!data.user) {
         throw new Error(data.error || 'Registration failed');
       }
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchJson } from '@/lib/fetch-json';
 
 const CLASS_OPTIONS = {
   'S1': ['S1A', 'S1B', 'S1C', 'S1D'],
@@ -17,7 +18,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'librarian' | 'deputy_head_teacher'>('student');
+  const [selectedRole] = useState<'student'>('student');
   const [selectedLevel, setSelectedLevel] = useState<keyof typeof CLASS_OPTIONS>('S1');
   const [selectedClass, setSelectedClass] = useState('S1A');
   const [isLoading, setIsLoading] = useState(false);
@@ -55,23 +56,24 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: username.toLowerCase().replace(/\s+/g, ''),
-          password,
-          name,
-          role: selectedRole,
-          level: selectedRole === 'student' ? selectedLevel : null,
-          class_name: selectedRole === 'student' ? selectedClass : null,
-        }),
-      });
+      const data = await fetchJson<{ user?: { id: string | number; username: string; name: string; role: string; class_name: string | null; level: string | null }; token?: string; error?: string; details?: string }>(
+        '/api/auth/register',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username.toLowerCase().replace(/\s+/g, ''),
+            password,
+            name,
+            role: selectedRole,
+            level: selectedLevel,
+            class_name: selectedClass,
+          }),
+        }
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `Registration failed (${response.status}): ${data.details || ''}`);
+      if (!data.user) {
+        throw new Error(data.error || 'Registration failed');
       }
 
       // Store user info and redirect
@@ -96,8 +98,11 @@ export default function RegisterPage() {
           📚 Library Management System
         </h1>
         <p className="text-gray-600 text-center mb-8">
-          Create your library account
+          Create your student account
         </p>
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Only students can register themselves. Librarian and deputy headteacher accounts are created by the library office.
+        </div>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 text-sm">
@@ -164,97 +169,50 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              I am a:
+              Account type:
             </label>
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedRole('student')}
-                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
-                  selectedRole === 'student'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
-                }`}
-              >
-                👨‍🎓 Student
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole('teacher')}
-                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
-                  selectedRole === 'teacher'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
-                }`}
-              >
-                👨‍🏫 Teacher
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole('librarian')}
-                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
-                  selectedRole === 'librarian'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
-                }`}
-              >
-                📚 Librarian
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole('deputy_head_teacher')}
-                className={`p-3 rounded-lg border-2 transition font-semibold text-sm ${
-                  selectedRole === 'deputy_head_teacher'
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                    : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-indigo-300'
-                }`}
-              >
-                👩‍🏫 Deputy Head Teacher
-              </button>
+            <div className="p-3 rounded-lg border-2 border-indigo-500 bg-indigo-50 text-indigo-900 font-semibold text-sm">
+              👨‍🎓 Student
             </div>
           </div>
 
-          {selectedRole === 'student' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Your Level
-                </label>
-                <select
-                  value={selectedLevel}
-                  onChange={(e) => {
-                    const level = e.target.value as keyof typeof CLASS_OPTIONS;
-                    setSelectedLevel(level);
-                    setSelectedClass(CLASS_OPTIONS[level][0]);
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                >
-                  {Object.keys(CLASS_OPTIONS).map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Your Level
+            </label>
+            <select
+              value={selectedLevel}
+              onChange={(e) => {
+                const level = e.target.value as keyof typeof CLASS_OPTIONS;
+                setSelectedLevel(level);
+                setSelectedClass(CLASS_OPTIONS[level][0]);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            >
+              {Object.keys(CLASS_OPTIONS).map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Your Class
-                </label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                >
-                  {CLASS_OPTIONS[selectedLevel].map((className) => (
-                    <option key={className} value={className}>
-                      {className}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Your Class
+            </label>
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            >
+              {CLASS_OPTIONS[selectedLevel].map((className) => (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
             type="submit"

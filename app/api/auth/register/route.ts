@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password, name, role, class_name, level } = body;
+    const normalizedRole = String(role || 'student').toLowerCase();
 
-    // Validate inputs
-    if (!username || !password || !name || !role) {
+    if (!username || !password || !name) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -39,29 +39,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (role === 'student' && (!class_name || !level)) {
+    if (normalizedRole !== 'student') {
+      return NextResponse.json(
+        { error: 'Self-service account creation is only available for students. Please contact the librarian to create librarian or deputy headteacher accounts.' },
+        { status: 400 }
+      );
+    }
+
+    if (!class_name || !level) {
       return NextResponse.json(
         { error: 'Students must select a level and class' },
         { status: 400 }
       );
     }
 
-    if (!['student', 'teacher', 'librarian', 'deputy_head_teacher'].includes(role)) {
+    const validClasses = VALID_CLASSES[level as keyof typeof VALID_CLASSES];
+    if (!validClasses || !validClasses.includes(class_name)) {
       return NextResponse.json(
-        { error: 'Invalid role selected' },
+        { error: 'Invalid class selection' },
         { status: 400 }
       );
-    }
-
-    // Validate class if student
-    if (role === 'student') {
-      const validClasses = VALID_CLASSES[level as keyof typeof VALID_CLASSES];
-      if (!validClasses || !validClasses.includes(class_name)) {
-        return NextResponse.json(
-          { error: 'Invalid class selection' },
-          { status: 400 }
-        );
-      }
     }
 
     const db = await getDatabase();
@@ -88,7 +85,7 @@ export async function POST(request: NextRequest) {
         username: username.toLowerCase(),
         password: password,
         name,
-        role,
+        role: 'student',
         class_name: class_name || null,
         level: level || null,
         created_at: new Date(),
@@ -116,7 +113,7 @@ export async function POST(request: NextRequest) {
         username: username.toLowerCase(),
         password: password,
         name,
-        role,
+        role: 'student',
         class_name: class_name || null,
         level: level || null,
         created_at: new Date(),
@@ -136,7 +133,7 @@ export async function POST(request: NextRequest) {
           id: insertedId,
           username,
           name,
-          role,
+          role: 'student',
           class_name: class_name || null,
           level: level || null,
         },
