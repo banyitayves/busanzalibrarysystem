@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchJson } from '@/lib/fetch-json';
 
 interface BookDetail {
   id: number;
@@ -34,20 +35,13 @@ export default function BookDetailsSection() {
     setError('');
 
     try {
-      const response = await fetch(`/api/books/${bookId}`);
-      const data = await response.json();
+      const data = await fetchJson<BookDetail>(`/api/books/${bookId}`);
+      setBook(data);
 
-      if (response.ok) {
-        setBook(data);
-        // Fetch summary
-        const summaryResponse = await fetch(`/api/books/${bookId}?action=summary`);
-        const summaryData = await summaryResponse.json();
-        setSummary(summaryData.summary || 'No summary available');
-      } else {
-        setError(data.error || 'Book not found');
-      }
+      const summaryData = await fetchJson<{ summary?: string }>(`/api/books/${bookId}?action=summary`);
+      setSummary(summaryData.summary || 'No summary available');
     } catch (err) {
-      setError(`Error: ${String(err)}`);
+      setError(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }

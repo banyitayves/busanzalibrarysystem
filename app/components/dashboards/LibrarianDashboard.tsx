@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
+import { fetchJson } from '@/lib/fetch-json';
 import LibraryReportsSection from '@/app/components/features/LibraryReportsSection';
 import CSVImportSection from '@/app/components/features/CSVImportSection';
 import ClassesManagementSection from '@/app/components/features/ClassesManagementSection';
@@ -21,19 +22,15 @@ export default function LibrarianDashboard() {
     const loadStats = async () => {
       try {
         setStatsLoading(true);
-        const [booksResponse, usersResponse, borrowResponse] = await Promise.all([
-          fetch('/api/books'),
-          fetch('/api/users?role=librarian'),
-          fetch('/api/borrow-records'),
+        const [booksData, usersData, borrowData] = await Promise.all([
+          fetchJson<any>('/api/books'),
+          fetchJson<any>('/api/users?role=librarian'),
+          fetchJson<any>('/api/borrow-records'),
         ]);
 
-        const booksData = await booksResponse.json();
-        const usersData = await usersResponse.json();
-        const borrowData = await borrowResponse.json();
-
-        const books = Array.isArray(booksData) ? booksData : Array.isArray(booksData.books) ? booksData.books : [];
+        const books = Array.isArray(booksData) ? booksData : Array.isArray((booksData as any)?.books) ? (booksData as any).books : [];
         const borrowRecords = Array.isArray(borrowData) ? borrowData : [];
-        const users = Array.isArray(usersData.users) ? usersData.users : [];
+        const users = Array.isArray((usersData as any)?.users) ? (usersData as any).users : [];
 
         const borrowedBooks = borrowRecords.filter((record: any) => record.status === 'borrowed' || record.status === 'overdue').length;
         const overdueBooks = borrowRecords.filter((record: any) => record.status === 'overdue').length;

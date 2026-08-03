@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
+import { fetchJson } from '@/lib/fetch-json';
 
 interface Book {
   id: string;
@@ -35,10 +36,9 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
 
   const fetchBooks = async () => {
     try {
-      const response = await fetch('/api/books?type=borrowable');
-      const data = await response.json();
-      
-      if (!response.ok || !Array.isArray(data)) {
+      const data = await fetchJson<any[]>('/api/books?type=borrowable');
+
+      if (!Array.isArray(data)) {
         setBooks([]);
         console.warn('Books API returned invalid data:', data);
       } else {
@@ -47,7 +47,7 @@ export default function BorrowBooksSection({ onBorrowSuccess }: BorrowBooksSecti
     } catch (error) {
       console.error('Error loading books:', error);
       setBooks([]);
-      setMessage(`Error loading books: ${String(error)}`);
+      setMessage(`Error loading books: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(false);
     }

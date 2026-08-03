@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { fetchJson } from '@/lib/fetch-json';
 
 interface ReadableBook {
   id: string;
@@ -17,8 +18,7 @@ export default function ReadBooksSection() {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await fetch('/api/books?type=readable');
-        const data = await response.json();
+        const data = await fetchJson<any[]>('/api/books?type=readable');
         setBooks(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error loading readable books:', error);
