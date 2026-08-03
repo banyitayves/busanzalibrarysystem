@@ -5,6 +5,14 @@ export type JsonFetchError = Error & {
 
 export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init);
+  // If the response followed a redirect, the body may be an HTML login page.
+  if (response.redirected || (response.status >= 300 && response.status < 400)) {
+    const redirectBody = await response.text();
+    const err = new Error(`Request was redirected (${response.status}) and returned HTML/redirect page.`) as JsonFetchError;
+    err.status = response.status;
+    err.responseBody = redirectBody.slice(0, 1000);
+    throw err;
+  }
   const contentType = response.headers.get('content-type') || '';
   const rawText = await response.text();
 

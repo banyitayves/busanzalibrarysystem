@@ -7,6 +7,7 @@ import StudentDashboard from '@/app/components/dashboards/StudentDashboard';
 import TeacherDashboard from '@/app/components/dashboards/TeacherDashboard';
 import LibrarianDashboard from '@/app/components/dashboards/LibrarianDashboard';
 import UserSettingsSection from '@/app/components/features/UserSettingsSection';
+import LibrarianAdminPanel from '@/app/components/admin/LibrarianAdminPanel';
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
@@ -65,6 +66,11 @@ export default function DashboardPage() {
         {(user.role === 'student' || user.role === 'guest') && <StudentDashboard />}
         {user.role === 'teacher' && <TeacherDashboard />}
         {(user.role === 'librarian' || user.role === 'deputy_head_teacher') && <LibrarianDashboard />}
+        {user.role === 'librarian' && (
+          <div className="mt-6">
+            <LibrarianAdminPanel />
+          </div>
+        )}
       </main>
     </div>
   );

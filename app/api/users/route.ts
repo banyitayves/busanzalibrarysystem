@@ -176,3 +176,39 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { username, password, name, role } = body;
+
+    if (!username || !password || !name || !role) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    }
+
+    if (!['librarian', 'deputy_head_teacher'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid role for this endpoint' }, { status: 400 });
+    }
+
+    const db = await getDatabase();
+    if (db) {
+      const usersCollection = db.collection('users');
+      const existing = await usersCollection.findOne({ username: username.toLowerCase() });
+      if (existing) return NextResponse.json({ error: 'Username taken' }, { status: 409 });
+      const newUser = { username: username.toLowerCase(), password, name, role, created_at: new Date() };
+      const res = await usersCollection.insertOne(newUser as any);
+      return NextResponse.json({ message: 'User created', id: res.insertedId }, { status: 201 });
+    } else {
+      const mockUsers = getMockUsers();
+      const existing = mockUsers.find((u) => u.username.toLowerCase() === username.toLowerCase());
+      if (existing) return NextResponse.json({ error: 'Username taken' }, { status: 409 });
+      const newUser = { _id: Math.random().toString(36).slice(2, 9), username: username.toLowerCase(), password, name, role, created_at: new Date() };
+      mockUsers.push(newUser as any);
+      setMockUsers(mockUsers);
+      return NextResponse.json({ message: 'User created', id: newUser._id }, { status: 201 });
+    }
+  } catch (err) {
+    console.error('Error creating user:', err);
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+  }
+}
