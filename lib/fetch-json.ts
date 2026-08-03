@@ -3,8 +3,21 @@ export type JsonFetchError = Error & {
   responseBody?: string;
 };
 
-export async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init);
+export async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers || {});
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+  if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(input, {
+    credentials: 'same-origin',
+    ...init,
+    headers,
+  });
+
   // If the response followed a redirect, the body may be an HTML login page.
   if (response.redirected || (response.status >= 300 && response.status < 400)) {
     const redirectBody = await response.text();
