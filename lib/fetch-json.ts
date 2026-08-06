@@ -42,10 +42,15 @@ export async function fetchJson<T>(input: RequestInfo | URL, init: RequestInit =
   const looksLikeJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');
 
   if (!looksLikeJson) {
-    const message = `Expected JSON but received ${contentType || 'unknown content type'} from ${String(input)}.`;
+    // If the server returned HTML (often an auth redirect or error page), provide a clearer message
+    const isHtml = contentType.includes('text/html') || /^<\/?html/i.test(rawText.trim());
+    const message = isHtml
+      ? `Expected JSON but received HTML (status ${response.status}) from ${String(input)}. This often means the server returned an error page or redirected to a login page.`
+      : `Expected JSON but received ${contentType || 'unknown content type'} from ${String(input)}.`;
+
     const error = new Error(message) as JsonFetchError;
     error.status = response.status;
-    error.responseBody = rawText.slice(0, 500);
+    error.responseBody = rawText.slice(0, 2000);
     throw error;
   }
 
